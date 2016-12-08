@@ -68,7 +68,7 @@
 <link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="hexo," />
+  <meta name="keywords" content="PHP," />
 
 
 
@@ -84,19 +84,58 @@
 
 
 
-<meta name="description" content="Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any problems when using Hexo, you can find the answer in troubleshooting or you can ask me on GitHub.
-Quick">
+<meta name="description" content="PHP数组是PHP最常用且最强大的数据结构,往往很多操作简单使用数组函数就可搞定,而无需写一大堆其他代码,增强代码执行效率和可维护性
+最常用函数:
+array
+array_column
+array_keys
+array_reverse
+array_search
+array_sum
+array_unique
+array_values
+count
+in_array
+sizeof  
+shuffle
+r">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Hello World">
-<meta property="og:url" content="https://1506430045.github.io/2016/09/23/hello-world/index.html">
+<meta property="og:title" content="PHP数组函数归纳">
+<meta property="og:url" content="https://1506430045.github.io/2016/11/15/php-array-function/index.html">
 <meta property="og:site_name" content="dacia's blog">
-<meta property="og:description" content="Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any problems when using Hexo, you can find the answer in troubleshooting or you can ask me on GitHub.
-Quick">
-<meta property="og:updated_time" content="2016-09-23T10:50:18.000Z">
+<meta property="og:description" content="PHP数组是PHP最常用且最强大的数据结构,往往很多操作简单使用数组函数就可搞定,而无需写一大堆其他代码,增强代码执行效率和可维护性
+最常用函数:
+array
+array_column
+array_keys
+array_reverse
+array_search
+array_sum
+array_unique
+array_values
+count
+in_array
+sizeof  
+shuffle
+r">
+<meta property="og:updated_time" content="2016-11-15T02:28:42.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Hello World">
-<meta name="twitter:description" content="Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any problems when using Hexo, you can find the answer in troubleshooting or you can ask me on GitHub.
-Quick">
+<meta name="twitter:title" content="PHP数组函数归纳">
+<meta name="twitter:description" content="PHP数组是PHP最常用且最强大的数据结构,往往很多操作简单使用数组函数就可搞定,而无需写一大堆其他代码,增强代码执行效率和可维护性
+最常用函数:
+array
+array_column
+array_keys
+array_reverse
+array_search
+array_sum
+array_unique
+array_values
+count
+in_array
+sizeof  
+shuffle
+r">
 
 
 
@@ -114,7 +153,7 @@ Quick">
   };
 </script>
 
-  <title> Hello World | dacia's blog </title>
+  <title> PHP数组函数归纳 | dacia's blog </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -254,7 +293,7 @@ Quick">
             
             
               
-                Hello World
+                PHP数组函数归纳
               
             
           </h1>
@@ -266,8 +305,8 @@ Quick">
               <i class="fa fa-calendar-o"></i>
             </span>
             <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-09-23T18:50:18+08:00" content="2016-09-23">
-              2016-09-23
+            <time itemprop="dateCreated" datetime="2016-11-15T10:28:42+08:00" content="2016-11-15">
+              2016-11-15
             </time>
           </span>
 
@@ -280,8 +319,8 @@ Quick">
               <span class="post-meta-item-text">分类于</span>
               
                 <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/hexo/" itemprop="url" rel="index">
-                    <span itemprop="name">hexo</span>
+                  <a href="/categories/PHP/" itemprop="url" rel="index">
+                    <span itemprop="name">PHP</span>
                   </a>
                 </span>
 
@@ -296,8 +335,8 @@ Quick">
             
               <span class="post-comments-count">
                 &nbsp; | &nbsp;
-                <a href="/2016/09/23/hello-world/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/09/23/hello-world/" itemprop="commentsCount"></span>
+                <a href="/2016/11/15/php-array-function/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/11/15/php-array-function/" itemprop="commentsCount"></span>
                 </a>
               </span>
             
@@ -320,15 +359,99 @@ Quick">
       
 
       
-        <p>Welcome to <a href="https://hexo.io/" target="_blank" rel="external">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/" target="_blank" rel="external">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html" target="_blank" rel="external">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues" target="_blank" rel="external">GitHub</a>.</p>
-<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo new <span class="string">"My New Post"</span></div></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/writing.html" target="_blank" rel="external">Writing</a></p>
-<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo server</div></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/server.html" target="_blank" rel="external">Server</a></p>
-<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo generate</div></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/generating.html" target="_blank" rel="external">Generating</a></p>
-<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo deploy</div></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/deployment.html" target="_blank" rel="external">Deployment</a></p>
+        <p>PHP数组是PHP最常用且最强大的数据结构,往往很多操作简单使用数组函数就可搞定,而无需写一大堆其他代码,增强代码执行效率和可维护性</p>
+<h4 id="最常用函数"><a href="#最常用函数" class="headerlink" title="最常用函数:"></a>最常用函数:</h4><ol>
+<li>array</li>
+<li>array_column</li>
+<li>array_keys</li>
+<li>array_reverse</li>
+<li>array_search</li>
+<li>array_sum</li>
+<li>array_unique</li>
+<li>array_values</li>
+<li>count</li>
+<li>in_array</li>
+<li>sizeof  </li>
+<li>shuffle</li>
+<li>range</li>
+<li>array_count_values</li>
+<li>array_chunk</li>
+<li>array_key_exists</li>
+<li>array_merge</li>
+<li>array_rand</li>
+<li>array_replace</li>
+<li>key</li>
+<li>list</li>
+<li>array_map</li>
+<li>array_walk</li>
+<li>array_filter </li>
+<li>array_flip</li>
+<li>array_fill</li>
+<li>array_combine</li>
+<li>array_change_key_case</li>
+<li>array_pad</li>
+<li>array_slice</li>
+</ol>
+<h4 id="位置函数"><a href="#位置函数" class="headerlink" title="位置函数:"></a>位置函数:</h4><ol>
+<li>current</li>
+<li>end</li>
+<li>next</li>
+<li>prev</li>
+<li>pos</li>
+<li>reset</li>
+<li>each</li>
+</ol>
+<h4 id="排序函数"><a href="#排序函数" class="headerlink" title="排序函数:"></a>排序函数:</h4><ol>
+<li>array_multisort</li>
+<li>arsort</li>
+<li>asort</li>
+<li>krsort</li>
+<li>ksort</li>
+<li>natcasesort</li>
+<li>natsort</li>
+<li>rsort</li>
+<li>sort</li>
+<li>uasort</li>
+<li>uksort</li>
+<li>usort</li>
+</ol>
+<h4 id="栈及队列"><a href="#栈及队列" class="headerlink" title="栈及队列"></a>栈及队列</h4><ol>
+<li>array_pop</li>
+<li>array_push</li>
+<li>array_shift</li>
+<li>array_unshift</li>
+</ol>
+<h4 id="差集"><a href="#差集" class="headerlink" title="差集"></a>差集</h4><ol>
+<li>array_diff_assoc</li>
+<li>array_diff_key</li>
+<li>array_diff_uassoc</li>
+<li>array_diff_ukey</li>
+<li>array_udiff</li>
+<li>array_udiff_assoc</li>
+<li>array_udiff_uassoc</li>
+<li>array_diff</li>
+</ol>
+<h4 id="交集"><a href="#交集" class="headerlink" title="交集"></a>交集</h4><ol>
+<li>array_intersect</li>
+<li>array_intersect_assoc</li>
+<li>array_intersect_key</li>
+<li>array_intersect_uassoc</li>
+<li>array_intersect_ukey</li>
+<li>array_uintersect</li>
+<li>array_uintersect_assoc</li>
+<li>array_uintersect_uassoc</li>
+</ol>
+<h4 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h4><ol>
+<li>array_fill_keys    </li>
+<li>array_merge_recursive    </li>
+<li>array_product</li>
+<li>array_reduce</li>
+<li>array_replace_recursive</li>
+<li>array_splice</li>
+<li>array_walk_recursive</li>
+<li>compact</li>
+<li>extract</li>
+</ol>
 
       
     </div>
@@ -350,7 +473,7 @@ Quick">
       
         <div class="post-tags">
           
-            <a href="/tags/hexo/" rel="tag">#hexo</a>
+            <a href="/tags/PHP/" rel="tag">#PHP</a>
           
         </div>
       
@@ -359,12 +482,16 @@ Quick">
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
+              <a href="/2016/11/14/php-closure/" rel="next" title="PHP闭包">
+                <i class="fa fa-chevron-left"></i> PHP闭包
+              </a>
+            
           </div>
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2016/11/14/php-extend/" rel="prev" title="PHP扩展开发入门">
-                PHP扩展开发入门 <i class="fa fa-chevron-right"></i>
+              <a href="/2016/11/15/sort-algorithm/" rel="prev" title="排序算法归纳总结及PHP实现">
+                排序算法归纳总结及PHP实现 <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -391,8 +518,8 @@ Quick">
           
   <div class="comments" id="comments">
     
-      <div class="ds-thread" data-thread-key="2016/09/23/hello-world/"
-           data-title="Hello World" data-url="https://1506430045.github.io/2016/09/23/hello-world/">
+      <div class="ds-thread" data-thread-key="2016/11/15/php-array-function/"
+           data-title="PHP数组函数归纳" data-url="https://1506430045.github.io/2016/11/15/php-array-function/">
       </div>
     
   </div>
@@ -503,7 +630,7 @@ Quick">
               
             
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Quick-Start"><span class="nav-number">1.</span> <span class="nav-text">Quick Start</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Create-a-new-post"><span class="nav-number">1.1.</span> <span class="nav-text">Create a new post</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Run-server"><span class="nav-number">1.2.</span> <span class="nav-text">Run server</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Generate-static-files"><span class="nav-number">1.3.</span> <span class="nav-text">Generate static files</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Deploy-to-remote-sites"><span class="nav-number">1.4.</span> <span class="nav-text">Deploy to remote sites</span></a></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#最常用函数"><span class="nav-number">1.</span> <span class="nav-text">最常用函数:</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#位置函数"><span class="nav-number">2.</span> <span class="nav-text">位置函数:</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#排序函数"><span class="nav-number">3.</span> <span class="nav-text">排序函数:</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#栈及队列"><span class="nav-number">4.</span> <span class="nav-text">栈及队列</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#差集"><span class="nav-number">5.</span> <span class="nav-text">差集</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#交集"><span class="nav-number">6.</span> <span class="nav-text">交集</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#其他"><span class="nav-number">7.</span> <span class="nav-text">其他</span></a></li></ol></div>
             
           </div>
         </section>
