@@ -68,7 +68,7 @@
 <link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="PHP," />
+  <meta name="keywords" content="PHP,订单," />
 
 
 
@@ -84,82 +84,31 @@
 
 
 
-<meta name="description" content="PHP 字符串函数是 PHP 核心的组成部分。
-最常用函数:
-substr
-substr_compare
-substr_count
-substr_replace
-trim
-ucfirst
-ucwords
-strlen
-strcmp
-echo
-explode
-join
-ltrim
-md5
-ord
-print
-printf
-rtrim
-addslashes
-strtolower
-strtoupper">
+<meta name="description" content="思想: 时间+随机数, 由于订单一般会分库分表, 所以加上用户ID（userId）后两位, 具体怎么加可看具体情况, 理论上时间+随机数+用户ID后两位不能百分百保证唯一, 所以数据库字段还是得建唯一索引保证订单ID的绝对唯一。
+规则: 
+
+年份取后两位足矣
+月份取值范围为01-12,所以这里取月份的16进制数（dechex）,减少位数
+时分秒,date(‘His’)所表达的结果其实就是00000">
 <meta property="og:type" content="article">
-<meta property="og:title" content="PHP字符串操作函数归纳">
-<meta property="og:url" content="https://1506430045.github.io/2016/11/15/php-string-function/index.html">
+<meta property="og:title" content="生成唯一订单号（16位字符串）">
+<meta property="og:url" content="https://1506430045.github.io/2017/01/21/create-order-id/index.html">
 <meta property="og:site_name" content="dacia's blog">
-<meta property="og:description" content="PHP 字符串函数是 PHP 核心的组成部分。
-最常用函数:
-substr
-substr_compare
-substr_count
-substr_replace
-trim
-ucfirst
-ucwords
-strlen
-strcmp
-echo
-explode
-join
-ltrim
-md5
-ord
-print
-printf
-rtrim
-addslashes
-strtolower
-strtoupper">
-<meta property="og:updated_time" content="2016-11-15T04:12:51.000Z">
+<meta property="og:description" content="思想: 时间+随机数, 由于订单一般会分库分表, 所以加上用户ID（userId）后两位, 具体怎么加可看具体情况, 理论上时间+随机数+用户ID后两位不能百分百保证唯一, 所以数据库字段还是得建唯一索引保证订单ID的绝对唯一。
+规则: 
+
+年份取后两位足矣
+月份取值范围为01-12,所以这里取月份的16进制数（dechex）,减少位数
+时分秒,date(‘His’)所表达的结果其实就是00000">
+<meta property="og:updated_time" content="2017-01-21T14:32:35.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="PHP字符串操作函数归纳">
-<meta name="twitter:description" content="PHP 字符串函数是 PHP 核心的组成部分。
-最常用函数:
-substr
-substr_compare
-substr_count
-substr_replace
-trim
-ucfirst
-ucwords
-strlen
-strcmp
-echo
-explode
-join
-ltrim
-md5
-ord
-print
-printf
-rtrim
-addslashes
-strtolower
-strtoupper">
+<meta name="twitter:title" content="生成唯一订单号（16位字符串）">
+<meta name="twitter:description" content="思想: 时间+随机数, 由于订单一般会分库分表, 所以加上用户ID（userId）后两位, 具体怎么加可看具体情况, 理论上时间+随机数+用户ID后两位不能百分百保证唯一, 所以数据库字段还是得建唯一索引保证订单ID的绝对唯一。
+规则: 
+
+年份取后两位足矣
+月份取值范围为01-12,所以这里取月份的16进制数（dechex）,减少位数
+时分秒,date(‘His’)所表达的结果其实就是00000">
 
 
 
@@ -177,7 +126,7 @@ strtoupper">
   };
 </script>
 
-  <title> PHP字符串操作函数归纳 | dacia's blog </title>
+  <title> 生成唯一订单号（16位字符串） | dacia's blog </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -317,7 +266,7 @@ strtoupper">
             
             
               
-                PHP字符串操作函数归纳
+                生成唯一订单号（16位字符串）
               
             
           </h1>
@@ -329,8 +278,8 @@ strtoupper">
               <i class="fa fa-calendar-o"></i>
             </span>
             <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-11-15T12:12:51+08:00" content="2016-11-15">
-              2016-11-15
+            <time itemprop="dateCreated" datetime="2017-01-21T22:32:35+08:00" content="2017-01-21">
+              2017-01-21
             </time>
           </span>
 
@@ -359,8 +308,8 @@ strtoupper">
             
               <span class="post-comments-count">
                 &nbsp; | &nbsp;
-                <a href="/2016/11/15/php-string-function/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/11/15/php-string-function/" itemprop="commentsCount"></span>
+                <a href="/2017/01/21/create-order-id/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2017/01/21/create-order-id/" itemprop="commentsCount"></span>
                 </a>
               </span>
             
@@ -383,117 +332,16 @@ strtoupper">
       
 
       
-        <p>PHP 字符串函数是 PHP 核心的组成部分。</p>
-<h4 id="最常用函数"><a href="#最常用函数" class="headerlink" title="最常用函数:"></a>最常用函数:</h4><ol>
-<li>substr</li>
-<li>substr_compare</li>
-<li>substr_count</li>
-<li>substr_replace</li>
-<li>trim</li>
-<li>ucfirst</li>
-<li>ucwords</li>
-<li>strlen</li>
-<li>strcmp</li>
-<li>echo</li>
-<li>explode</li>
-<li>join</li>
-<li>ltrim</li>
-<li>md5</li>
-<li>ord</li>
-<li>print</li>
-<li>printf</li>
-<li>rtrim</li>
-<li>addslashes</li>
-<li>strtolower</li>
-<li>strtoupper</li>
-<li>strrev</li>
-<li>strstr</li>
-<li>strpos</li>
-<li>str_replace</li>
-<li>str_repeat</li>
-<li>str_shuffle</li>
-<li>str_split</li>
-<li>strcasecmp</li>
-<li>strchr strstr的别名</li>
-<li>strcmp</li>
-<li>addcslashes</li>
-<li>chop</li>
-<li>chr</li>
-<li>crc32</li>
-<li>crypt</li>
-<li>nl2br</li>
-<li>parse_str</li>
-<li>htmlspecialchars</li>
-<li>implode</li>
-<li>strip_tags</li>
-<li>stripcslashes</li>
-<li>stripslashes</li>
-<li>str_pad</li>
-<li>str_ireplace</li>
-<li>htmlentities</li>
+        <p>思想: 时间+随机数, 由于订单一般会分库分表, 所以加上用户ID（userId）后两位, 具体怎么加可看具体情况, 理论上时间+随机数+用户ID后两位不能百分百保证唯一, 所以数据库字段还是得建唯一索引保证订单ID的绝对唯一。</p>
+<p>规则: </p>
+<ol>
+<li>年份取后两位足矣</li>
+<li>月份取值范围为01-12,所以这里取月份的16进制数（dechex）,减少位数</li>
+<li>时分秒,date(‘His’)所表达的结果其实就是000000到235959，而且其中很多数字不会被用到比如126998。一天86400秒，如果从一天的0:0:0算起直到23:59:59使用00000-86400就可以完全表示，这样下来我们就完全可以把date(‘His’)换成五位数字。既然time()函数就是按秒计数，那咱就取time()结果的后五位，同一天之内后五位不会重复出现，比如今天0:0:0后五位是98765，那么到今天23:59:59后五位就应该是98765+86400去掉最高位，相信这个应该是很好理解的</li>
+<li>随机数,秒小数点后取4位</li>
+<li>用户ID（userId）取后两位</li>
 </ol>
-<h4 id="比较"><a href="#比较" class="headerlink" title="比较:"></a>比较:</h4><ol>
-<li>strcoll</li>
-<li>strnatcasecmp</li>
-<li>strnatcmp</li>
-<li>strncasecmp</li>
-<li>strncmp</li>
-</ol>
-<h4 id="格式化"><a href="#格式化" class="headerlink" title="格式化:"></a>格式化:</h4><ol>
-<li>fprintf</li>
-<li>money_format</li>
-<li>number_format</li>
-<li>sprintf</li>
-<li>vfprintf</li>
-<li>vprintf</li>
-<li>vsprintf</li>
-</ol>
-<h4 id="编码"><a href="#编码" class="headerlink" title="编码:"></a>编码:</h4><ol>
-<li>convert_uudecode</li>
-<li>convert_uuencode</li>
-<li>str_rot13</li>
-</ol>
-<h4 id="查找"><a href="#查找" class="headerlink" title="查找:"></a>查找:</h4><ol>
-<li>strcspn</li>
-<li>stristr</li>
-<li>strpbrk</li>
-<li>stripos</li>
-<li>strrchr</li>
-<li>strripos</li>
-<li>strrpos</li>
-</ol>
-<h4 id="其他"><a href="#其他" class="headerlink" title="其他:"></a>其他:</h4><ol>
-<li>bin2hex</li>
-<li>chunk_split</li>
-<li>convert_cyr_string</li>
-<li>count_chars</li>
-<li>get_html_translation_table</li>
-<li>hebrev</li>
-<li>hebrevc</li>
-<li>hex2bin</li>
-<li>html_entity_decode</li>
-<li>htmlspecialchars_decode</li>
-<li>lcfirst</li>
-<li>levenshtein</li>
-<li>localeconv</li>
-<li>md5_file</li>
-<li>metaphone</li>
-<li>nl_langinfo</li>
-<li>quoted_printable_decode</li>
-<li>quoted_printable_encode</li>
-<li>quotemeta</li>
-<li>setlocale</li>
-<li>sha1</li>
-<li>sha1_file</li>
-<li>similar_text</li>
-<li>soundex</li>
-<li>sscanf</li>
-<li>str_getcsv</li>
-<li>str_word_count</li>
-<li>strspn</li>
-<li>strtok</li>
-<li>strtr</li>
-</ol>
+<p>代码如下:<br><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line"><span class="meta">&lt;?php</span></div><div class="line"><span class="comment">/**</span></div><div class="line"> * 随机生成唯一订单号码</div><div class="line"> *</div><div class="line"> * <span class="doctag">@param</span> int $userId</div><div class="line"> * <span class="doctag">@return</span> string</div><div class="line"> * <span class="doctag">@throws</span> Exception</div><div class="line"> */</div><div class="line"><span class="function"><span class="keyword">function</span> <span class="title">createOrderId</span><span class="params">($userId = <span class="number">0</span>)</span></span></div><div class="line">&#123;</div><div class="line">    <span class="keyword">if</span> (<span class="keyword">empty</span>($userId)) &#123;</div><div class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="keyword">Exception</span>(<span class="string">'用户ID错误, userId='</span> . $userId);</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">list</span>($ms, $time) = explode(<span class="string">' '</span>, microtime());</div><div class="line">    $year = date(<span class="string">'y'</span>, $time);   <span class="comment">//当前年份,2位数</span></div><div class="line">    $month = date(<span class="string">'m'</span>, $time);  <span class="comment">//当前月份,2为数,转为16进制只占一位</span></div><div class="line">    $day = date(<span class="string">'d'</span>, $time);    <span class="comment">//当前日期</span></div><div class="line">    <span class="keyword">return</span> $year . strtoupper(dechex($month)) . $day . substr($time, <span class="number">-5</span>) . substr($ms, <span class="number">2</span>, <span class="number">4</span>) . substr($userId, <span class="number">-2</span>);</div><div class="line">&#125;</div><div class="line"></div><div class="line">$userId = <span class="number">110003978</span>;</div><div class="line"><span class="keyword">for</span> ($i = <span class="number">0</span>; $i &lt; <span class="number">10</span>; $i++) &#123;</div><div class="line">    <span class="keyword">echo</span> createOrderId($userId) . PHP_EOL;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
 
       
     </div>
@@ -517,6 +365,8 @@ strtoupper">
           
             <a href="/tags/PHP/" rel="tag">#PHP</a>
           
+            <a href="/tags/订单/" rel="tag">#订单</a>
+          
         </div>
       
 
@@ -524,17 +374,13 @@ strtoupper">
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2016/11/15/sort-algorithm/" rel="next" title="排序算法归纳总结及PHP实现">
-                <i class="fa fa-chevron-left"></i> 排序算法归纳总结及PHP实现
+              <a href="/2017/01/15/php-pdo-base-model/" rel="next" title="PDO基础操作类">
+                <i class="fa fa-chevron-left"></i> PDO基础操作类
               </a>
             
           </div>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2016/11/15/mysql-stock-over/" rel="prev" title="mysql防止库存超卖">
-                mysql防止库存超卖 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -560,8 +406,8 @@ strtoupper">
           
   <div class="comments" id="comments">
     
-      <div class="ds-thread" data-thread-key="2016/11/15/php-string-function/"
-           data-title="PHP字符串操作函数归纳" data-url="https://1506430045.github.io/2016/11/15/php-string-function/">
+      <div class="ds-thread" data-thread-key="2017/01/21/create-order-id/"
+           data-title="生成唯一订单号（16位字符串）" data-url="https://1506430045.github.io/2017/01/21/create-order-id/">
       </div>
     
   </div>
@@ -672,7 +518,7 @@ strtoupper">
               
             
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#最常用函数"><span class="nav-number">1.</span> <span class="nav-text">最常用函数:</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#比较"><span class="nav-number">2.</span> <span class="nav-text">比较:</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#格式化"><span class="nav-number">3.</span> <span class="nav-text">格式化:</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#编码"><span class="nav-number">4.</span> <span class="nav-text">编码:</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#查找"><span class="nav-number">5.</span> <span class="nav-text">查找:</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#其他"><span class="nav-number">6.</span> <span class="nav-text">其他:</span></a></li></ol></div>
+              <p class="post-toc-empty">此文章未包含目录</p>
             
           </div>
         </section>
