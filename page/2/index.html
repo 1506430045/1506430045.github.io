@@ -253,6 +253,253 @@
             
               
                 
+                <a class="post-title-link" href="/2016/11/14/php-closure/" itemprop="url">
+                  PHP闭包
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2016-11-14T18:56:22+08:00" content="2016-11-14">
+              2016-11-14
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/PHP/" itemprop="url" rel="index">
+                    <span itemprop="name">PHP</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/11/14/php-closure/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/11/14/php-closure/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>php的闭包（Closure）也就是匿名函数。是PHP5.3引入的。<br><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="meta">&lt;?php</span></div><div class="line">    $a = <span class="function"><span class="keyword">function</span><span class="params">()</span> <span class="title">use</span> <span class="params">($b)</span> </span>&#123;</div><div class="line">    </div><div class="line">    &#125;</div></pre></td></tr></table></figure></p>
+<h4 id="闭包的几个作用"><a href="#闭包的几个作用" class="headerlink" title="闭包的几个作用:"></a>闭包的几个作用:</h4><ol>
+<li>减少foreach的循环的代码</li>
+<li>减少函数的参数</li>
+<li>解除递归函数</li>
+<li>关于延迟绑定</li>
+</ol>
+<h4 id="减少foreach的循环的代码"><a href="#减少foreach的循环的代码" class="headerlink" title="减少foreach的循环的代码"></a>减少foreach的循环的代码</h4><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">function</span> <span class="title">myFunction</span><span class="params">($value, $key)</span> </span>&#123;</div><div class="line">    <span class="keyword">echo</span> <span class="string">"The key $key has the value $value"</span> . PHP_EOL;</div><div class="line">&#125;</div><div class="line">$arr = [</div><div class="line">    <span class="string">'a'</span> =&gt; <span class="string">'red'</span>,</div><div class="line">    <span class="string">'b'</span> =&gt; <span class="string">'blue'</span>,</div><div class="line">    <span class="string">'c'</span> =&gt; <span class="string">'yellow'</span>,</div><div class="line">];</div><div class="line">array_walk($arr, <span class="string">"myFunction"</span>);</div></pre></td></tr></table></figure>
+<h4 id="减少函数的参数"><a href="#减少函数的参数" class="headerlink" title="减少函数的参数"></a>减少函数的参数</h4><h4 id="解除递归函数"><a href="#解除递归函数" class="headerlink" title="解除递归函数"></a>解除递归函数</h4><h4 id="关于延迟绑定"><a href="#关于延迟绑定" class="headerlink" title="关于延迟绑定"></a>关于延迟绑定</h4><h4 id="本文参考"><a href="#本文参考" class="headerlink" title="本文参考"></a>本文参考</h4><p><a href="http://www.cnblogs.com/yjf512/archive/2012/10/29/2744702.html" target="_blank" rel="external">轩脉刃de刀光剑影</a></p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
+                <a class="post-title-link" href="/2016/11/14/php-extend/" itemprop="url">
+                  PHP扩展开发入门
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2016-11-14T18:31:39+08:00" content="2016-11-14">
+              2016-11-14
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/PHP/" itemprop="url" rel="index">
+                    <span itemprop="name">PHP</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/11/14/php-extend/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/11/14/php-extend/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="一级标题"><a href="#一级标题" class="headerlink" title="一级标题"></a>一级标题</h1>
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
                 <a class="post-title-link" href="/2016/09/23/hello-world/" itemprop="url">
                   Hello World
                 </a>
@@ -405,7 +652,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">11</span>
+              <span class="site-state-item-count">13</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
@@ -413,7 +660,7 @@
           
             <div class="site-state-item site-state-categories">
               <a href="/categories">
-                <span class="site-state-item-count">4</span>
+                <span class="site-state-item-count">6</span>
                 <span class="site-state-item-name">分类</span>
               </a>
             </div>
@@ -422,7 +669,7 @@
           
             <div class="site-state-item site-state-tags">
               <a href="/tags">
-                <span class="site-state-item-count">7</span>
+                <span class="site-state-item-count">11</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
