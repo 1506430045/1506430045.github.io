@@ -253,8 +253,8 @@
             
               
                 
-                <a class="post-title-link" href="/2017/02/17/redis-transaction-lua-pipeline/" itemprop="url">
-                  redis中的事务、lua脚本和管道的使用场景
+                <a class="post-title-link" href="/2017/02/19/distributed-system-redis-lock/" itemprop="url">
+                  用Redis构建分布式锁
                 </a>
               
             
@@ -267,8 +267,8 @@
               <i class="fa fa-calendar-o"></i>
             </span>
             <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2017-02-17T18:55:46+08:00" content="2017-02-17">
-              2017-02-17
+            <time itemprop="dateCreated" datetime="2017-02-19T18:07:16+08:00" content="2017-02-19">
+              2017-02-19
             </time>
           </span>
 
@@ -297,8 +297,165 @@
             
               <span class="post-comments-count">
                 &nbsp; | &nbsp;
-                <a href="/2017/02/17/redis-transaction-lua-pipeline/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2017/02/17/redis-transaction-lua-pipeline/" itemprop="commentsCount"></span>
+                <a href="/2017/02/19/distributed-system-redis-lock/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2017/02/19/distributed-system-redis-lock/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>在不同进程需要互斥地访问共享资源时，分布式锁是一种非常有用的技术手段。 有很多三方库和文章描述如何用Redis实现一个分布式锁管理器，但是这些库实现的方式差别很大，而且很多简单的实现其实只需采用稍微增加一点复杂的设计就可以获得更好的可靠性。 这篇文章的目的就是尝试提出一种官方权威的用Redis实现分布式锁管理器的算法，我们把这个算法称为RedLock，我们相信这个算法会比一般的普通方法更加安全可靠。我们也希望社区能一起分析这个算法，提供一些反馈，然后我们以此为基础，来设计出更加复杂可靠的算法，或者更好的新算法。</p>
+<h4 id="安全和可靠性保证"><a href="#安全和可靠性保证" class="headerlink" title="安全和可靠性保证"></a>安全和可靠性保证</h4><p>在描述我们的设计之前，我们想先提出三个属性，这三个属性在我们看来，是实现高效分布式锁的基础。</p>
+<ol>
+<li>安全属性：互斥，不管任何时候，只有一个客户端能持有同一个锁。</li>
+<li>效率属性A：不会死锁，最终一定会得到锁，就算一个持有锁的客户端宕掉或者发生网络分区。</li>
+<li>效率属性B：容错，只要大多数Redis节点正常工作，客户端应该都能获取和释放锁。</li>
+</ol>
+<h4 id="安全和可靠性保证-1"><a href="#安全和可靠性保证-1" class="headerlink" title="安全和可靠性保证"></a>安全和可靠性保证</h4><p>在描述我们的设计之前，我们想先提出三个属性，这三个属性在我们看来，是实现高效分布式锁的基础。</p>
+<ol>
+<li>安全属性：互斥，不管任何时候，只有一个客户端能持有同一个锁。</li>
+<li>效率属性A：不会死锁，最终一定会得到锁，就算一个持有锁的客户端宕掉或者发生网络分区。</li>
+<li>效率属性B：容错，只要大多数Redis节点正常工作，客户端应该都能获取和释放锁。</li>
+</ol>
+<h4 id="为什么基于故障切换的方案不够好"><a href="#为什么基于故障切换的方案不够好" class="headerlink" title="为什么基于故障切换的方案不够好"></a>为什么基于故障切换的方案不够好</h4><p>为了理解我们想要提高的到底是什么，我们先看下当前大多数基于Redis的分布式锁三方库的现状。 <font color="red" face="“黑体”">用Redis来实现分布式锁最简单的方式就是在实例里创建一个键值</font>，创建出来的键值一般都是有一个超时时间的（这个是Redis自带的超时特性），所以每个锁最终都会释放。<font color="red" face="“黑体”">而当一个客户端想要释放锁时，它只需要删除这个键值即可</font>。 表面来看，这个方法似乎很管用，但是这里存在一个问题：在我们的系统架构里存在一个单点故障，如果Redis的master节点宕机了怎么办呢？有人可能会说：加一个slave节点！在master宕机时用slave就行了！但是其实这个方案明显是不可行的，因为这种方案无法保证第1个安全互斥属性，因为Redis的复制是异步的。 总的来说，这个方案里有一个明显的竞争条件（race condition），举例来说：</p>
+<ol>
+<li>客户端A在master节点拿到了锁。</li>
+<li>master节点在把A创建的key写入slave之前宕机了。</li>
+<li>slave变成了master节点 </li>
+<li>B也得到了和A还持有的相同的锁（因为原来的slave里还没有A持有锁的信息）</li>
+</ol>
+<p>当然，在某些特殊场景下，前面提到的这个方案则完全没有问题，比如在宕机期间，多个客户端允许同时都持有锁，如果你可以容忍这个问题的话，那用这个基于复制的方案就完全没有问题，否则的话我们还是建议你采用这篇文章里接下来要描述的方案。</p>
+<h4 id="采用单实例的正确实现"><a href="#采用单实例的正确实现" class="headerlink" title="采用单实例的正确实现"></a>采用单实例的正确实现</h4><p>在讲述如何用其他方案突破单实例方案的限制之前，让我们先看下是否有什么办法可以修复这个简单场景的问题，因为这个方案其实如果可以忍受竞争条件的话是有望可行的，而且单实例来实现分布式锁是我们后面要讲的算法的基础。 <font color="red" face="黑体">要获得锁，要用下面这个命令： SET resource_name my_random_value NX PX 30000 </font>这个命令的作用是在只有这个key不存在的时候才会设置这个key的值（NX选项的作用），超时时间设为30000毫秒（PX选项的作用） <font color="red" face="黑体">这个key的值设为“my_random_value”。这个值必须在所有获取锁请求的客户端里保持唯一</font>。 基本上这个随机值就是用来保证能安全地释放锁，我们可以用下面这个Lua脚本来告诉Redis：删除这个key当且仅当这个key存在而且值是我期望的那个值。</p>
+<figure class="highlight lua"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">if</span> redis.call(<span class="string">"get"</span>,KEYS[<span class="number">1</span>]) == ARGV[<span class="number">1</span>] </div><div class="line">    <span class="keyword">then</span></div><div class="line">        <span class="keyword">return</span> redis.call(<span class="string">"del"</span>,KEYS[<span class="number">1</span>])</div><div class="line">    <span class="keyword">else</span></div><div class="line">        <span class="keyword">return</span> <span class="number">0</span></div><div class="line">    <span class="keyword">end</span></div></pre></td></tr></table></figure>
+<p>这个很重要，因为这可以避免误删其他客户端得到的锁，举个例子，一个客户端拿到了锁，被某个操作阻塞了很长时间，过了超时时间后自动释放了这个锁，然后这个客户端之后又尝试删除这个其实已经被其他客户端拿到的锁。所以单纯的用DEL指令有可能造成一个客户端删除了其他客户端的锁，用上面这个脚本可以保证每个客户单都用一个随机字符串’签名’了，这样每个锁就只能被获得锁的客户端删除了。</p>
+<p>这个随机字符串应该用什么生成呢？我假设这是从/dev/urandom生成的20字节大小的字符串，但是其实你可以有效率更高的方案来保证这个字符串足够唯一。比如你可以用RC4加密算法来从/dev/urandom生成一个伪随机流。还有更简单的方案，比如用毫秒的unix时间戳加上客户端id，这个也许不够安全，但是也许在大多数环境下已经够用了。</p>
+<p><font color="red" face="黑体">key值的超时时间，也叫做”锁有效时间”。这个是锁的自动释放时间，也是一个客户端在其他客户端能抢占锁之前可以执行任务的时间，这个时间从获取锁的时间点开始计算</font>。 所以现在我们有很好的获取和释放锁的方式，在一个非分布式的、单点的、保证永不宕机的环境下这个方式没有任何问题，接下来我们看看无法保证这些条件的分布式环境下我们该怎么做。</p>
+<h4 id="Redlock算法"><a href="#Redlock算法" class="headerlink" title="Redlock算法"></a>Redlock算法</h4><p>在分布式版本的算法里我们假设我们有N个Redis master节点，这些节点都是完全独立的，我们不用任何复制或者其他隐含的分布式协调算法。我们已经描述了如何在单节点环境下安全地获取和释放锁。因此我们理所当然地应当用这个方法在每个单节点里来获取和释放锁。在我们的例子里面我们把N设成5，这个数字是一个相对比较合理的数值，因此我们需要在不同的计算机或者虚拟机上运行5个master节点来保证他们大多数情况下都不会同时宕机。一个客户端需要做如下操作来获取锁：</p>
+<ol>
+<li>获取当前时间（单位是毫秒）。</li>
+<li>轮流用相同的key和随机值在N个节点上请求锁，在这一步里，客户端在每个master上请求锁时，会有一个和总的锁释放时间相比小的多的超时时间。比如如果锁自动释放时间是10秒钟，那每个节点锁请求的超时时间可能是5-50毫秒的范围，这个可以防止一个客户端在某个宕掉的master节点上阻塞过长时间，如果一个master节点不可用了，我们应该尽快尝试下一个master节点。</li>
+<li>客户端计算第二步中获取锁所花的时间，只有当客户端在大多数master节点上成功获取了锁（在这里是3个），而且总共消耗的时间不超过锁释放时间，这个锁就认为是获取成功了。</li>
+<li>如果锁获取成功了，那现在锁自动释放时间就是最初的锁释放时间减去之前获取锁所消耗的时间。</li>
+<li>如果锁获取失败了，不管是因为获取成功的锁不超过一半（N/2+1)还是因为总消耗时间超过了锁释放时间，客户端都会到每个master节点上释放锁，即便是那些他认为没有获取成功的锁。</li>
+</ol>
+<h4 id="失败的重试"><a href="#失败的重试" class="headerlink" title="失败的重试"></a>失败的重试</h4><p>当一个客户端获取锁失败时，这个客户端应该在一个随机延时后进行重试，之所以采用随机延时是为了避免不同客户端同时重试导致谁都无法拿到锁的情况出现。同样的道理客户端越快尝试在大多数Redis节点获取锁，出现多个客户端同时竞争锁和重试的时间窗口越小，可能性就越低，所以最完美的情况下，客户端应该用多路传输的方式同时向所有Redis节点发送SET命令。 这里非常有必要强调一下客户端如果没有在多数节点获取到锁，一定要尽快在获取锁成功的节点上释放锁，这样就没必要等到key超时后才能重新获取这个锁（但是如果网络分区的情况发生而且客户端无法连接到Redis节点时，会损失等待key超时这段时间的系统可用性）</p>
+<h4 id="释放锁"><a href="#释放锁" class="headerlink" title="释放锁"></a>释放锁</h4><p>释放锁比较简单，因为只需要在所有节点都释放锁就行，不管之前有没有在该节点获取锁成功。</p>
+<h4 id="代码（PHP）"><a href="#代码（PHP）" class="headerlink" title="代码（PHP）"></a>代码（PHP）</h4><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div><div class="line">103</div><div class="line">104</div><div class="line">105</div><div class="line">106</div><div class="line">107</div><div class="line">108</div><div class="line">109</div><div class="line">110</div><div class="line">111</div><div class="line">112</div><div class="line">113</div><div class="line">114</div><div class="line">115</div><div class="line">116</div><div class="line">117</div><div class="line">118</div><div class="line">119</div><div class="line">120</div><div class="line">121</div><div class="line">122</div><div class="line">123</div><div class="line">124</div><div class="line">125</div><div class="line">126</div><div class="line">127</div><div class="line">128</div><div class="line">129</div><div class="line">130</div><div class="line">131</div><div class="line">132</div><div class="line">133</div><div class="line">134</div><div class="line">135</div><div class="line">136</div><div class="line">137</div><div class="line">138</div><div class="line">139</div><div class="line">140</div><div class="line">141</div><div class="line">142</div><div class="line">143</div><div class="line">144</div><div class="line">145</div><div class="line">146</div><div class="line">147</div><div class="line">148</div><div class="line">149</div><div class="line">150</div><div class="line">151</div><div class="line">152</div><div class="line">153</div><div class="line">154</div><div class="line">155</div><div class="line">156</div><div class="line">157</div><div class="line">158</div></pre></td><td class="code"><pre><div class="line"><span class="comment">/**</span></div><div class="line"> * Redis分布式锁实现</div><div class="line"> */</div><div class="line"><span class="keyword">namespace</span> <span class="title">Lib</span>\<span class="title">Lock</span>;</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">RedLock</span></span></div><div class="line">&#123;</div><div class="line">    <span class="keyword">private</span> $retryDelay;</div><div class="line">    <span class="keyword">private</span> $retryCount;</div><div class="line">    <span class="keyword">private</span> $clockDriftFactor = <span class="number">0.01</span>;</div><div class="line"></div><div class="line">    <span class="keyword">private</span> $quorum;</div><div class="line"></div><div class="line">    <span class="keyword">private</span> $servers = [];</div><div class="line">    <span class="keyword">private</span> $instances = [];</div><div class="line"></div><div class="line">    <span class="comment">/**</span></div><div class="line">     * 构造方法</div><div class="line">     *</div><div class="line">     * RedLock constructor.</div><div class="line">     * <span class="doctag">@param</span> array $servers</div><div class="line">     * <span class="doctag">@param</span> int $retryDelay</div><div class="line">     * <span class="doctag">@param</span> int $retryCount</div><div class="line">     */</div><div class="line">    <span class="function"><span class="keyword">function</span> <span class="title">__construct</span><span class="params">(array $servers, $retryDelay = <span class="number">200</span>, $retryCount = <span class="number">3</span>)</span></span></div><div class="line">    &#123;</div><div class="line">        <span class="keyword">$this</span>-&gt;servers = $servers;          <span class="comment">//多台redis实例</span></div><div class="line"></div><div class="line">        <span class="keyword">$this</span>-&gt;retryDelay = $retryDelay;    <span class="comment">//重试延迟 毫秒</span></div><div class="line">        <span class="keyword">$this</span>-&gt;retryCount = $retryCount;    <span class="comment">//重试次数</span></div><div class="line"></div><div class="line">        <span class="comment">//获取锁成功数量必须大于等于该数（实例总数的半数以上-&gt;分布式锁互斥原则）</span></div><div class="line">        <span class="keyword">$this</span>-&gt;quorum = min(count($servers), (count($servers) / <span class="number">2</span> + <span class="number">1</span>));</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="comment">/**</span></div><div class="line">     * 锁定</div><div class="line">     *</div><div class="line">     * <span class="doctag">@param</span> $resource</div><div class="line">     * <span class="doctag">@param</span> $ttl</div><div class="line">     * <span class="doctag">@return</span> array|bool</div><div class="line">     */</div><div class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">lock</span><span class="params">($resource, $ttl)</span></span></div><div class="line">    &#123;</div><div class="line">        <span class="keyword">$this</span>-&gt;initInstances();</div><div class="line"></div><div class="line">        $token = uniqid();          <span class="comment">//唯一ID</span></div><div class="line">        $retry = <span class="keyword">$this</span>-&gt;retryCount; <span class="comment">//重试次数</span></div><div class="line"></div><div class="line">        <span class="keyword">do</span> &#123;</div><div class="line">            $n = <span class="number">0</span>; <span class="comment">//获取锁成功数量</span></div><div class="line"></div><div class="line">            $startTime = microtime(<span class="keyword">true</span>) * <span class="number">1000</span>;    <span class="comment">//开始时间</span></div><div class="line"></div><div class="line">            <span class="keyword">foreach</span> (<span class="keyword">$this</span>-&gt;instances <span class="keyword">as</span> $instance) &#123;   <span class="comment">//轮流在每个实例上请求锁</span></div><div class="line">                <span class="keyword">if</span> (<span class="keyword">$this</span>-&gt;lockInstance($instance, $resource, $token, $ttl)) &#123;</div><div class="line">                    $n++;</div><div class="line">                &#125;</div><div class="line">            &#125;</div><div class="line"></div><div class="line">            <span class="comment"># Add 2 milliseconds to the drift to account for Redis expires</span></div><div class="line">            <span class="comment"># precision, which is 1 millisecond, plus 1 millisecond min drift</span></div><div class="line">            <span class="comment"># for small TTLs.</span></div><div class="line">            $drift = ($ttl * <span class="keyword">$this</span>-&gt;clockDriftFactor) + <span class="number">2</span>;  <span class="comment">//偏移时间</span></div><div class="line"></div><div class="line">            <span class="comment">//锁对象的有效时间=锁自动释放时间-(当前时间-开始时间)-偏移时间</span></div><div class="line">            $validityTime = $ttl - (microtime(<span class="keyword">true</span>) * <span class="number">1000</span> - $startTime) - $drift;</div><div class="line"></div><div class="line">            <span class="keyword">if</span> ($n &gt;= <span class="keyword">$this</span>-&gt;quorum &amp;&amp; $validityTime &gt; <span class="number">0</span>) &#123; <span class="comment">//加锁成功</span></div><div class="line">                <span class="keyword">return</span> [</div><div class="line">                    <span class="string">'validity'</span> =&gt; $validityTime,</div><div class="line">                    <span class="string">'resource'</span> =&gt; $resource,</div><div class="line">                    <span class="string">'token'</span> =&gt; $token,</div><div class="line">                ];</div><div class="line"></div><div class="line">            &#125; <span class="keyword">else</span> &#123;    <span class="comment">//加锁失败 轮流释放锁后重试</span></div><div class="line">                <span class="keyword">foreach</span> (<span class="keyword">$this</span>-&gt;instances <span class="keyword">as</span> $instance) &#123;</div><div class="line">                    <span class="keyword">$this</span>-&gt;unlockInstance($instance, $resource, $token);</div><div class="line">                &#125;</div><div class="line">            &#125;</div><div class="line"></div><div class="line">            <span class="comment">//等待随机延迟重试</span></div><div class="line">            $delay = mt_rand(floor(<span class="keyword">$this</span>-&gt;retryDelay / <span class="number">2</span>), <span class="keyword">$this</span>-&gt;retryDelay);</div><div class="line">            usleep($delay * <span class="number">1000</span>);</div><div class="line"></div><div class="line">            $retry--;</div><div class="line"></div><div class="line">        &#125; <span class="keyword">while</span> ($retry &gt; <span class="number">0</span>);</div><div class="line"></div><div class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="comment">/**</span></div><div class="line">     * 解锁</div><div class="line">     *</div><div class="line">     * <span class="doctag">@param</span> array $lock</div><div class="line">     */</div><div class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">unlock</span><span class="params">(array $lock)</span></span></div><div class="line">    &#123;</div><div class="line">        <span class="keyword">$this</span>-&gt;initInstances();</div><div class="line">        $resource = $lock[<span class="string">'resource'</span>];</div><div class="line">        $token = $lock[<span class="string">'token'</span>];</div><div class="line">        <span class="keyword">foreach</span> (<span class="keyword">$this</span>-&gt;instances <span class="keyword">as</span> $instance) &#123;</div><div class="line">            <span class="keyword">$this</span>-&gt;unlockInstance($instance, $resource, $token);</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line"></div><div class="line"></div><div class="line">    <span class="comment">/**</span></div><div class="line">     * 获取redis连接</div><div class="line">     */</div><div class="line">    <span class="keyword">private</span> <span class="function"><span class="keyword">function</span> <span class="title">initInstances</span><span class="params">()</span></span></div><div class="line">    &#123;</div><div class="line">        <span class="keyword">if</span> (<span class="keyword">empty</span>(<span class="keyword">$this</span>-&gt;instances)) &#123;</div><div class="line">            <span class="keyword">foreach</span> (<span class="keyword">$this</span>-&gt;servers <span class="keyword">as</span> $server) &#123;</div><div class="line">                <span class="keyword">list</span>($host, $port, $timeout) = $server;</div><div class="line">                $redis = <span class="keyword">new</span> \Redis();</div><div class="line">                $redis-&gt;connect($host, $port, $timeout);</div><div class="line"></div><div class="line">                <span class="keyword">$this</span>-&gt;instances[] = $redis;</div><div class="line">            &#125;</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="comment">/**</span></div><div class="line">     * 加锁</div><div class="line">     *</div><div class="line">     * <span class="doctag">@param</span> \Redis $instance</div><div class="line">     * <span class="doctag">@param</span> $resource</div><div class="line">     * <span class="doctag">@param</span> $token</div><div class="line">     * <span class="doctag">@param</span> $ttl</div><div class="line">     * <span class="doctag">@return</span> bool</div><div class="line">     */</div><div class="line">    <span class="keyword">private</span> <span class="function"><span class="keyword">function</span> <span class="title">lockInstance</span><span class="params">(\Redis $instance, $resource, $token, $ttl)</span></span></div><div class="line">    &#123;</div><div class="line">        <span class="keyword">return</span> $instance-&gt;set($resource, $token, [<span class="string">'NX'</span>, <span class="string">'PX'</span> =&gt; $ttl]);</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="comment">/**</span></div><div class="line">     * 解锁</div><div class="line">     *</div><div class="line">     * <span class="doctag">@param</span> \Redis $instance</div><div class="line">     * <span class="doctag">@param</span> $resource</div><div class="line">     * <span class="doctag">@param</span> $token</div><div class="line">     * <span class="doctag">@return</span> mixed</div><div class="line">     */</div><div class="line">    <span class="keyword">private</span> <span class="function"><span class="keyword">function</span> <span class="title">unlockInstance</span><span class="params">(\Redis $instance, $resource, $token)</span></span></div><div class="line">    &#123;</div><div class="line">        $script = <span class="string">'</span></div><div class="line">            if redis.call("GET", KEYS[1]) == ARGV[1] then</div><div class="line">                return redis.call("DEL", KEYS[1])</div><div class="line">            else</div><div class="line">                return 0</div><div class="line">            end</div><div class="line">        ';</div><div class="line">        <span class="keyword">return</span> $instance-&gt;eval($script, [$resource, $token], <span class="number">1</span>);</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h4><p>转载自<a href="http://ifeve.com/" target="_blank" rel="external">并发编程网</a>, <a href="http://ifeve.com/redis-lock/" target="_blank" rel="external">《Redis官方文档》用Redis构建分布式锁</a></p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
+                <a class="post-title-link" href="/2017/02/19/redis-transaction-lua-pipeline/" itemprop="url">
+                  redis中的事务、lua脚本和管道的使用场景
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2017-02-19T18:05:11+08:00" content="2017-02-19">
+              2017-02-19
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/Redis/" itemprop="url" rel="index">
+                    <span itemprop="name">Redis</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2017/02/19/redis-transaction-lua-pipeline/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2017/02/19/redis-transaction-lua-pipeline/" itemprop="commentsCount"></span>
                 </a>
               </span>
             
@@ -357,7 +514,127 @@
 <p>Pipeline在某些场景下非常有用，比如有多个command需要被“及时的”提交，而且他们对相应结果没有互相依赖，而且对结果响应也无需立即获得，那么pipeline就可以充当这种“批处理”的工具；而且在一定程度上，可以较大的提升性能,性能提升的原因主要是TCP链接中较少了“交互往返”的时间。例如：因为业务需要，我们需要把用户的操作过程记录在日志中以方便以后的统计，每隔3个小时生成一个新的日志文件，那么后台处理线程，将会扫描日志文件并将每条日志输出为“operation”:1,即表示操作次数为1;如果每个operation都发送一个command，事实上性能是很差的，而且是没有必要的；那么我们就可以使用pipeline批量提交即可。</p>
 <p>管道和事务是不同的，pipeline只是表达“交互”中操作的传递的方向性，pipeline也可以在事务中运行，也可以不在。无论如何，pipeline中发送的每个command都会被server立即执行，如果执行失败，将会在此后的相应中得到信息；也就是pipeline并不是表达“所有command都一起成功”的语义，管道中前面命令失败，后面命令不会有影响，继续执行。简单来说就是管道中的命令是没有关系的，它们只是像管道一样流水发给server，而不是串行执行，仅此而已；但是如果pipeline的操作被封装在事务中，那么将有事务来确保操作的成功与失败。</p>
 <p>使用管道可能在效率上比使用script要好，但是有的情况下只能使用script。因为在执行后面的命令时，无法得到前面命令的结果，就像事务一样，所以如果需要在后面命令中使用前面命令的value等结果，则只能使用script或者事务+watch。</p>
-<h4 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h4><p><a href="http://blog.csdn.net/fangjian1204/article/details/50585080" target="_blank" rel="external"> redis中的事务、lua脚本和管道的使用场景</a></p>
+<h4 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h4><p><a href="http://blog.csdn.net/fangjian1204/article/details/50585080" target="_blank" rel="external">redis中的事务、lua脚本和管道的使用场景</a></p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
+                <a class="post-title-link" href="/2017/02/19/linux-command/" itemprop="url">
+                  Linux常用命令,备忘（不完全）
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2017-02-19T17:46:23+08:00" content="2017-02-19">
+              2017-02-19
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/Linux/" itemprop="url" rel="index">
+                    <span itemprop="name">Linux</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2017/02/19/linux-command/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2017/02/19/linux-command/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>lsof -i:4000    查看指定端口的进程</p>
 
           
         
@@ -1496,338 +1773,6 @@
 
 
     
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2016/11/15/sort-algorithm/" itemprop="url">
-                  排序算法归纳总结及PHP实现
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-11-15T10:36:32+08:00" content="2016-11-15">
-              2016-11-15
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/算法/" itemprop="url" rel="index">
-                    <span itemprop="name">算法</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                &nbsp; | &nbsp;
-                <a href="/2016/11/15/sort-algorithm/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/11/15/sort-algorithm/" itemprop="commentsCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-
-          
-          
-
-          
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>哈哈</p>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2016/11/15/php-array-function/" itemprop="url">
-                  PHP数组函数归纳
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-11-15T10:28:42+08:00" content="2016-11-15">
-              2016-11-15
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/PHP/" itemprop="url" rel="index">
-                    <span itemprop="name">PHP</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                &nbsp; | &nbsp;
-                <a href="/2016/11/15/php-array-function/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/11/15/php-array-function/" itemprop="commentsCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-
-          
-          
-
-          
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>PHP数组是PHP最常用且最强大的数据结构,往往很多操作简单使用数组函数就可搞定,而无需写一大堆其他代码,增强代码执行效率和可维护性</p>
-<h4 id="最常用函数"><a href="#最常用函数" class="headerlink" title="最常用函数:"></a>最常用函数:</h4><ol>
-<li>array</li>
-<li>array_column</li>
-<li>array_keys</li>
-<li>array_reverse</li>
-<li>array_search</li>
-<li>array_sum</li>
-<li>array_unique</li>
-<li>array_values</li>
-<li>count</li>
-<li>in_array</li>
-<li>sizeof  </li>
-<li>shuffle</li>
-<li>range</li>
-<li>array_count_values</li>
-<li>array_chunk</li>
-<li>array_key_exists</li>
-<li>array_merge</li>
-<li>array_rand</li>
-<li>array_replace</li>
-<li>key</li>
-<li>list</li>
-<li>array_map</li>
-<li>array_walk</li>
-<li>array_filter </li>
-<li>array_flip</li>
-<li>array_fill</li>
-<li>array_combine</li>
-<li>array_change_key_case</li>
-<li>array_pad</li>
-<li>array_slice</li>
-</ol>
-<h4 id="位置函数"><a href="#位置函数" class="headerlink" title="位置函数:"></a>位置函数:</h4><ol>
-<li>current</li>
-<li>end</li>
-<li>next</li>
-<li>prev</li>
-<li>pos</li>
-<li>reset</li>
-<li>each</li>
-</ol>
-<h4 id="排序函数"><a href="#排序函数" class="headerlink" title="排序函数:"></a>排序函数:</h4><ol>
-<li>array_multisort</li>
-<li>arsort</li>
-<li>asort</li>
-<li>krsort</li>
-<li>ksort</li>
-<li>natcasesort</li>
-<li>natsort</li>
-<li>rsort</li>
-<li>sort</li>
-<li>uasort</li>
-<li>uksort</li>
-<li>usort</li>
-</ol>
-<h4 id="栈及队列"><a href="#栈及队列" class="headerlink" title="栈及队列"></a>栈及队列</h4><ol>
-<li>array_pop</li>
-<li>array_push</li>
-<li>array_shift</li>
-<li>array_unshift</li>
-</ol>
-<h4 id="差集"><a href="#差集" class="headerlink" title="差集"></a>差集</h4><ol>
-<li>array_diff_assoc</li>
-<li>array_diff_key</li>
-<li>array_diff_uassoc</li>
-<li>array_diff_ukey</li>
-<li>array_udiff</li>
-<li>array_udiff_assoc</li>
-<li>array_udiff_uassoc</li>
-<li>array_diff</li>
-</ol>
-<h4 id="交集"><a href="#交集" class="headerlink" title="交集"></a>交集</h4><ol>
-<li>array_intersect</li>
-<li>array_intersect_assoc</li>
-<li>array_intersect_key</li>
-<li>array_intersect_uassoc</li>
-<li>array_intersect_ukey</li>
-<li>array_uintersect</li>
-<li>array_uintersect_assoc</li>
-<li>array_uintersect_uassoc</li>
-</ol>
-<h4 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h4><ol>
-<li>array_fill_keys    </li>
-<li>array_merge_recursive    </li>
-<li>array_product</li>
-<li>array_reduce</li>
-<li>array_replace_recursive</li>
-<li>array_splice</li>
-<li>array_walk_recursive</li>
-<li>compact</li>
-<li>extract</li>
-</ol>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -1873,7 +1818,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">13</span>
+              <span class="site-state-item-count">15</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
@@ -1881,7 +1826,7 @@
           
             <div class="site-state-item site-state-categories">
               <a href="/categories">
-                <span class="site-state-item-count">6</span>
+                <span class="site-state-item-count">7</span>
                 <span class="site-state-item-name">分类</span>
               </a>
             </div>
@@ -1890,7 +1835,7 @@
           
             <div class="site-state-item site-state-tags">
               <a href="/tags">
-                <span class="site-state-item-count">11</span>
+                <span class="site-state-item-count">14</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
