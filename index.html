@@ -253,6 +253,374 @@
             
               
                 
+                <a class="post-title-link" href="/2017/02/17/redis-transaction-lua-pipeline/" itemprop="url">
+                  redis中的事务、lua脚本和管道的使用场景
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2017-02-17T18:55:46+08:00" content="2017-02-17">
+              2017-02-17
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/Redis/" itemprop="url" rel="index">
+                    <span itemprop="name">Redis</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2017/02/17/redis-transaction-lua-pipeline/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2017/02/17/redis-transaction-lua-pipeline/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h4 id="一、事务"><a href="#一、事务" class="headerlink" title="一、事务"></a>一、事务</h4><p><strong>Redis</strong>中的事务并不像MySQL中那么完美，只是简单的保证了原子性。redis中提供了四个命令来实现事务，<strong>MULTI</strong>类似于mysql中的BEGIN;<strong>EXEC</strong>类似于COMMIT;<strong>DISCARD</strong>类似于ROLLBACK;<strong>WATCH</strong>则是用于来实现mysql中类似锁的功能。具体的使用方法非常简单，例如：<br><figure class="highlight js"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; multi</div><div class="line">OK</div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; incr count</div><div class="line">QUEUED</div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; incr count</div><div class="line">QUEUED</div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; exec</div><div class="line"><span class="number">1</span>) (integer) <span class="number">1</span></div><div class="line"><span class="number">2</span>) (integer) <span class="number">2</span></div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; get count</div><div class="line"><span class="string">"2"</span></div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt;</div></pre></td></tr></table></figure></p>
+<p>redis事务的实现原理是把事务中的命令先放入队列中，当client提交了exec命令后，redis会把队列中的每一条命令按序执行一遍。如果在执行exec之前事务中断了，那么所有的命令都不会执行；如果执行了exec命令之后，那么所有的命令都会按序执行。但如果在事务执行期间redis被强制关闭，那么则需要使用redis-check-aof 工具对redis进行修复，删除那些部分执行的命令。下面分几种情况讨论下redis事务中需要注意的地方：</p>
+<ol>
+<li>入队命令语法错误，此时还没有执行exec命令</li>
+</ol>
+<p>虽然redis在碰到exec命令之前不会执行事务中的命令，但是，它会对每个命令进行适当的检查，当发现有某些明显的语法错误时，如参数个数不正确，则会在入队时，返回错误信息，并当看到exec命令调用discard命令进行回滚。例如：<br><figure class="highlight js"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; get name</div><div class="line"><span class="string">"xiangqian"</span></div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; multi</div><div class="line">OK</div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; set name sanduo</div><div class="line">QUEUED</div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; set name</div><div class="line">(error) ERR wrong number <span class="keyword">of</span> <span class="built_in">arguments</span> <span class="keyword">for</span> <span class="string">'set'</span> command</div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; exec</div><div class="line">(error) EXECABORT Transaction discarded because <span class="keyword">of</span> previous errors.</div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; get name</div><div class="line"><span class="string">"xiangqian"</span></div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt;</div></pre></td></tr></table></figure></p>
+<ol>
+<li>当exec执行完毕后，执行其它命令时发生错误</li>
+</ol>
+<p>当redis在执行命令时，如果出现了错误，那么redis不会终止其它命令的执行。即只要是正确的命令，无论在错误命令之前还是之后，都会顺利执行。例如：<br><figure class="highlight js"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; lpush visited <span class="string">"name1"</span></div><div class="line">(integer) <span class="number">1</span></div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; get name</div><div class="line"><span class="string">"xiangqian"</span></div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; get count</div><div class="line"><span class="string">"2"</span></div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; multi</div><div class="line">OK</div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; set name sanduo</div><div class="line">QUEUED</div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; get visited</div><div class="line">QUEUED</div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; set count <span class="number">20</span></div><div class="line">QUEUED</div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; exec</div><div class="line"><span class="number">1</span>) OK</div><div class="line"><span class="number">2</span>) (error) WRONGTYPE Operation against a key holding the wrong kind <span class="keyword">of</span> value</div><div class="line"><span class="number">3</span>) OK</div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; get name</div><div class="line"><span class="string">"sanduo"</span></div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; get count</div><div class="line"><span class="string">"20"</span></div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt;</div></pre></td></tr></table></figure></p>
+<ol>
+<li>事务间的相互影响</li>
+</ol>
+<p>事务中最长出现的影响就是同时修改一条记录，而redis中的事务默认没有对此进行处理，如果两个事务同时修改一条记录，首先执行exec的事务的结果将会被覆盖。这里我们可以使用watch命令，该命令用于监控某些具体的key，如果这些key被其它事务修改了，那么本事务再修改时就不会成功，然后返回失败的提示。<br><figure class="highlight js"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">T1：</div><div class="line">    watch name</div><div class="line">    multi</div><div class="line">    set name Jeff</div><div class="line">    exec</div><div class="line">T2：</div><div class="line">    watch name</div><div class="line">    multi</div><div class="line">    set name Kate</div><div class="line">    exec</div></pre></td></tr></table></figure></p>
+<p>如果T2先提交exec，那么T1提交时则更新失败，此时name依旧是Kate，然后在应用层决定是否需要重新执行该事务。</p>
+<h4 id="二、Lua脚本-2-6-0及以后版本"><a href="#二、Lua脚本-2-6-0及以后版本" class="headerlink" title="二、Lua脚本(2.6.0及以后版本)"></a>二、Lua脚本(2.6.0及以后版本)</h4><p>Lua脚本其使用方法很简单,例如:<br><figure class="highlight lua"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">eval <span class="string">"return &#123;KEYS[1],KEYS[2],ARGV[1],ARGV[2]&#125;"</span> <span class="number">2</span> key1 key2 first second</div></pre></td></tr></table></figure></p>
+<p>redis确保正一条script脚本执行期间，其它任何脚本或者命令都无法执行。正是由于这种原子性，script才可以替代MULTI/EXEC作为事务使用。当然，官方文档也说了，正是由于script执行的原子性，所以我们不要在script中执行过长开销的程序，否则会验证影响其它请求的执行。</p>
+<p>另外，redis为了减少每次客户端发送来的数据带宽(如果script太长，则发送来的内容可能非常多)，会把每次新出现的脚本的sha1摘要保存下来，这样后续如果script不变的话，只需要调用evalsha命令+script摘要即可，而不需要重复传递过长的脚本内容。例如：<br><figure class="highlight lua"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; eval <span class="string">"return redis.call('get','foo')"</span> <span class="number">0</span></div><div class="line"><span class="string">"bar"</span></div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; evalsha <span class="number">6</span>b1bf486c81ceb7edf3c093f4c48582e38c0e791 <span class="number">0</span></div><div class="line"><span class="string">"bar"</span></div></pre></td></tr></table></figure></p>
+<p>从这里可以看出把key和arg以参数的形式传递而不是直接写在script中的好处，因为这样可以把变量提取出来，使得script的sha1摘要保持不变，提高命中率。在应用程序中，可以先使用evalsha进行调用，如果失败，再使用eval进行操作，这样可以在一定程度上提高效率。</p>
+<p>有了上面的知识，我们就可以使用lua脚本来灵活的使用redis的事务，这里举几个简单的例子。</p>
+<p>场景1：我们要判断一个IP是不是第一次访问，如果是第一次访问，那么返回状态1，否则插入该ip，并返回状态0.</p>
+<figure class="highlight lua"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; eval <span class="string">"if redis.call('get',KEYS[1]) then return 1 else redis.call('set', KEYS[1], 'test') return 0 end"</span> <span class="number">1</span> test_127<span class="number">.0</span><span class="number">.0</span><span class="number">.1</span></div><div class="line">(integer) <span class="number">0</span></div><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; eval <span class="string">"if redis.call('get',KEYS[1]) then return 1 else redis.call('set', KEYS[1], 'test') return 0 end"</span> <span class="number">1</span> test_127<span class="number">.0</span><span class="number">.0</span><span class="number">.1</span></div><div class="line">(integer) <span class="number">1</span></div></pre></td></tr></table></figure>
+<p>场景2：使用redis限制30分钟内一个IP只允许访问5次</p>
+<p>思路：每次想把当前的时间插入到redis的list中，然后判断list长度是否达到5次，如果大于5次，那么取出队首的元素，和当前时间进行判断，如果在30分钟之内，则返回-1，其它情况返回1.</p>
+<figure class="highlight lua"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">eval <span class="string">"redis.call('rpush', KEYS[1],ARGV[1]);if (redis.call('llen',KEYS[1]) &gt;tonumber(ARGV[2]))</span></div></pre></td></tr></table></figure>
+<p>通过上面两个场景可以看到，我们仅仅使用了lua的if语句，就可以实现这么方便的操作，如果使用其它的lua语法，肯定更加方便。</p>
+<p>官网文档上有这样一段话：</p>
+<p>A Redis script is transactional by definition, so everything you can do with a Redis transaction, you can also do with a script, and usually the script will be both simpler and faster.</p>
+<p>由此可以看出，官方还是支持大家尽量使用lua script来代替transaction的。</p>
+<h4 id="三、管道"><a href="#三、管道" class="headerlink" title="三、管道"></a>三、管道</h4><p>大家都知道redis是基于TCP连接进行通信的，每一个request/response都需要经历一个RTT往返时间，如果需要执行很多短小的命令，这些往返时间的开销是很大的，在此情形下，redis提出了管道来提高执行效率。管道的思想是：如果client执行一些相互之间无关的命令或者不需要获取命令的返回值，那么redis允许你连续发送多条命令，而不需要等待前面命令执行完毕。比如我们执行3条INCR命令，如果使用管道，理论上只需要一个RTT+3条命令的执行时间即可，如果不适用管道，那么可能需要额外的两个RTT时间。因此，管道相当于批处理脚本，相当于是命令集，例如：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="comment">//php代码示例</span></div><div class="line">$redis = <span class="keyword">new</span> Redis();   </div><div class="line">$redis-&gt;connect(<span class="string">'127.0.0.1'</span>, <span class="number">6379</span>);    </div><div class="line">$pipe = $redis-&gt;multi(Redis::PIPELINE);   </div><div class="line"><span class="keyword">for</span> ($i = <span class="number">0</span>; $i &lt;  <span class="number">10000</span>; $i++) &#123;   </div><div class="line">    $pipe-&gt;set(<span class="string">"key::$i"</span>, str_pad($i, <span class="number">4</span>, <span class="string">'0'</span>));   </div><div class="line">    $pipe-&gt;get(<span class="string">"key::$i"</span>);   </div><div class="line">&#125;   </div><div class="line">$replies = $pipe-&gt;exec();</div></pre></td></tr></table></figure>
+<p>Pipeline在某些场景下非常有用，比如有多个command需要被“及时的”提交，而且他们对相应结果没有互相依赖，而且对结果响应也无需立即获得，那么pipeline就可以充当这种“批处理”的工具；而且在一定程度上，可以较大的提升性能,性能提升的原因主要是TCP链接中较少了“交互往返”的时间。例如：因为业务需要，我们需要把用户的操作过程记录在日志中以方便以后的统计，每隔3个小时生成一个新的日志文件，那么后台处理线程，将会扫描日志文件并将每条日志输出为“operation”:1,即表示操作次数为1;如果每个operation都发送一个command，事实上性能是很差的，而且是没有必要的；那么我们就可以使用pipeline批量提交即可。</p>
+<p>管道和事务是不同的，pipeline只是表达“交互”中操作的传递的方向性，pipeline也可以在事务中运行，也可以不在。无论如何，pipeline中发送的每个command都会被server立即执行，如果执行失败，将会在此后的相应中得到信息；也就是pipeline并不是表达“所有command都一起成功”的语义，管道中前面命令失败，后面命令不会有影响，继续执行。简单来说就是管道中的命令是没有关系的，它们只是像管道一样流水发给server，而不是串行执行，仅此而已；但是如果pipeline的操作被封装在事务中，那么将有事务来确保操作的成功与失败。</p>
+<p>使用管道可能在效率上比使用script要好，但是有的情况下只能使用script。因为在执行后面的命令时，无法得到前面命令的结果，就像事务一样，所以如果需要在后面命令中使用前面命令的value等结果，则只能使用script或者事务+watch。</p>
+<h4 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h4><p><a href="http://blog.csdn.net/fangjian1204/article/details/50585080" target="_blank" rel="external"> redis中的事务、lua脚本和管道的使用场景</a></p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
+                <a class="post-title-link" href="/2017/01/22/mongo-shell/" itemprop="url">
+                  mongodb命令汇总
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2017-01-22T17:50:06+08:00" content="2017-01-22">
+              2017-01-22
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/MongoDB/" itemprop="url" rel="index">
+                    <span itemprop="name">MongoDB</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2017/01/22/mongo-shell/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2017/01/22/mongo-shell/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="MongoDB基本命令汇总"><a href="#MongoDB基本命令汇总" class="headerlink" title="MongoDB基本命令汇总"></a>MongoDB基本命令汇总</h2><ol>
+<li>find()/findOne()条件过滤</li>
+</ol>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line">&gt; use test;</div><div class="line">switched to db test</div><div class="line">&gt; db.Student.find(&#123;name: <span class="string">'tony'</span>&#125;);</div><div class="line">&#123; <span class="string">"_id"</span> : ObjectId(<span class="string">"58847521dd517a3b4e43c52d"</span>), <span class="string">"name"</span> : <span class="string">"tony"</span>, <span class="string">"sex"</span> : <span class="number">1</span>, <span class="string">"age"</span> : <span class="number">13</span> &#125;</div><div class="line">&#123; <span class="string">"_id"</span> : ObjectId(<span class="string">"5884762cdd517a3b4e43c532"</span>), <span class="string">"name"</span> : <span class="string">"tony"</span>, <span class="string">"sex"</span> : <span class="number">1</span>, <span class="string">"age"</span> : <span class="number">13</span> &#125;</div><div class="line">&#123; <span class="string">"_id"</span> : ObjectId(<span class="string">"5884762cdd517a3b4e43c537"</span>), <span class="string">"name"</span> : <span class="string">"tony"</span>, <span class="string">"sex"</span> : <span class="number">1</span>, <span class="string">"age"</span> : <span class="number">13</span> &#125;</div><div class="line"></div><div class="line">&gt; db.Student.findOne();</div><div class="line">&#123;</div><div class="line">   	<span class="string">"_id"</span> : ObjectId(<span class="string">"588474b8dd517a3b4e43c524"</span>),</div><div class="line">   	<span class="string">"name"</span> : <span class="string">"jack"</span>,</div><div class="line">   	<span class="string">"sex"</span> : <span class="number">1</span>,</div><div class="line">   	<span class="string">"age"</span> : <span class="number">33</span></div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<ol>
+<li>find()/findOne()指定返回的fileds</li>
+</ol>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">&gt; db.Student.find(&#123;name: <span class="string">'tony'</span>&#125;, &#123;<span class="string">'_id'</span>: <span class="number">0</span>, <span class="string">'name'</span>: <span class="number">1</span>&#125;)</div><div class="line">&#123; <span class="string">"name"</span> : <span class="string">"tony"</span> &#125;</div><div class="line">&#123; <span class="string">"name"</span> : <span class="string">"tony"</span> &#125;</div><div class="line">&#123; <span class="string">"name"</span> : <span class="string">"tony"</span> &#125;</div><div class="line"></div><div class="line">&gt; db.Student.findOne(&#123;age: <span class="number">13</span>&#125;, &#123;<span class="string">'_id'</span>: <span class="number">0</span>, <span class="string">'name'</span>: <span class="number">1</span>, <span class="string">'sex'</span>: <span class="number">1</span>&#125;)</div><div class="line">&#123; <span class="string">"name"</span> : <span class="string">"lily"</span>, <span class="string">"sex"</span> : <span class="number">0</span> &#125;</div></pre></td></tr></table></figure>
+<ol>
+<li>查询条件</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>符号</th>
+<th style="text-align:center">对应</th>
+<th style="text-align:right">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>$lt</td>
+<td style="text-align:center">\&lt;</td>
+<td style="text-align:right">小余</td>
+</tr>
+<tr>
+<td>$lte</td>
+<td style="text-align:center">\&lt;=</td>
+<td style="text-align:right">小于或等于</td>
+</tr>
+<tr>
+<td>$gt</td>
+<td style="text-align:center">></td>
+<td style="text-align:right">大于</td>
+</tr>
+<tr>
+<td>$gte</td>
+<td style="text-align:center">\=</td>
+<td style="text-align:right">大于或等于</td>
+</tr>
+<tr>
+<td>$ne</td>
+<td style="text-align:center">\&lt;&gt;</td>
+<td style="text-align:right">不等于</td>
+</tr>
+<tr>
+<td>$in</td>
+<td style="text-align:center">in</td>
+<td style="text-align:right">in范围</td>
+</tr>
+<tr>
+<td>$not</td>
+<td style="text-align:center">not</td>
+<td style="text-align:right">not范围</td>
+</tr>
+<tr>
+<td>$or</td>
+<td style="text-align:center">or</td>
+<td style="text-align:right">或者</td>
+</tr>
+</tbody>
+</table>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line">&gt; db.Student.findOne(&#123;age: &#123;$gte: <span class="number">98</span>&#125;&#125;)</div><div class="line">&#123;</div><div class="line">       	<span class="string">"_id"</span> : ObjectId(<span class="string">"58847521dd517a3b4e43c529"</span>),</div><div class="line">       	<span class="string">"name"</span> : <span class="string">"nima"</span>,</div><div class="line">       	<span class="string">"sex"</span> : <span class="number">1</span>,</div><div class="line">       	<span class="string">"age"</span> : <span class="number">98</span></div><div class="line">&#125;</div><div class="line">&gt; db.Student.findOne(&#123;age: &#123;$ne: <span class="number">98</span>&#125;&#125;)</div><div class="line">&#123;</div><div class="line">       	<span class="string">"_id"</span> : ObjectId(<span class="string">"588474b8dd517a3b4e43c524"</span>),</div><div class="line">       	<span class="string">"name"</span> : <span class="string">"jack"</span>,</div><div class="line">       	<span class="string">"sex"</span> : <span class="number">1</span>,</div><div class="line">       	<span class="string">"age"</span> : <span class="number">33</span></div><div class="line">&#125;</div><div class="line">&gt; db.Student.find(&#123;$or: [&#123;age: &#123;$<span class="keyword">in</span>: [<span class="number">12</span>, <span class="number">13</span>]&#125;&#125;, &#123;name: <span class="string">'tony'</span>&#125;]&#125;, &#123;_id: <span class="number">0</span>&#125;)</div><div class="line">&#123; <span class="string">"name"</span> : <span class="string">"lily"</span>, <span class="string">"sex"</span> : <span class="number">0</span>, <span class="string">"age"</span> : <span class="number">13</span> &#125;</div><div class="line">&#123; <span class="string">"name"</span> : <span class="string">"hehh"</span>, <span class="string">"sex"</span> : <span class="number">0</span>, <span class="string">"age"</span> : <span class="number">13</span> &#125;</div><div class="line">&#123; <span class="string">"name"</span> : <span class="string">"tony"</span>, <span class="string">"sex"</span> : <span class="number">1</span>, <span class="string">"age"</span> : <span class="number">13</span></div></pre></td></tr></table></figure>
+<ol>
+<li>特殊查询–null和exists</li>
+</ol>
+<p>null可以匹配自身,而且可以匹配”不存在的”<br><figure class="highlight js"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">&gt; db.Student.find(&#123;name: <span class="literal">null</span>&#125;, &#123;_id: <span class="number">0</span>&#125;)</div><div class="line">&#123; <span class="string">"name"</span> : <span class="literal">null</span>, <span class="string">"sex"</span> : <span class="number">1</span>, <span class="string">"age"</span> : <span class="number">18</span> &#125;</div><div class="line">&#123; <span class="string">"sex"</span> : <span class="number">1</span>, <span class="string">"age"</span> : <span class="number">24</span> &#125;</div><div class="line">&gt; db.Student.find(&#123;name:&#123;$<span class="keyword">in</span>:[<span class="literal">null</span>],$exists:<span class="literal">true</span>&#125;&#125;, &#123;_id: <span class="number">0</span>&#125;)</div><div class="line">&#123; <span class="string">"name"</span> : <span class="literal">null</span>, <span class="string">"sex"</span> : <span class="number">1</span>, <span class="string">"age"</span> : <span class="number">18</span> &#125;</div></pre></td></tr></table></figure></p>
+<ol>
+<li>数组查询</li>
+</ol>
+<p>造数据<br><figure class="highlight js"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">db.Student.insert(&#123;name:<span class="string">"wjh"</span>,sex:<span class="number">1</span>,age:<span class="number">18</span>,color:[<span class="string">"red"</span>,<span class="string">"blue"</span>,<span class="string">"black"</span>]&#125;)</div><div class="line">db.Student.insert(&#123;name:<span class="string">"lpj"</span>,sex:<span class="number">1</span>,age:<span class="number">22</span>,color:[<span class="string">"white"</span>,<span class="string">"blue"</span>,<span class="string">"black"</span>]&#125;)</div><div class="line">db.Student.find()</div></pre></td></tr></table></figure></p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">&gt; db.Student.find(&#123;color:<span class="string">"white"</span>&#125;, &#123;_id: <span class="number">0</span>&#125;)</div><div class="line">&#123; <span class="string">"name"</span> : <span class="string">"lpj"</span>, <span class="string">"sex"</span> : <span class="number">1</span>, <span class="string">"age"</span> : <span class="number">22</span>, <span class="string">"color"</span> : [ <span class="string">"white"</span>, <span class="string">"blue"</span>, <span class="string">"black"</span> ] &#125;</div><div class="line">&gt; db.Student.find(&#123;color:&#123;$all:[<span class="string">"red"</span>,<span class="string">"blue"</span>]&#125;&#125;, &#123;_id: <span class="number">0</span>&#125;)</div><div class="line">&#123; <span class="string">"name"</span> : <span class="string">"wjh"</span>, <span class="string">"sex"</span> : <span class="number">1</span>, <span class="string">"age"</span> : <span class="number">18</span>, <span class="string">"color"</span> : [ <span class="string">"red"</span>, <span class="string">"blue"</span>, <span class="string">"black"</span> ] &#125;</div><div class="line">&gt; db.Student.find(&#123;color:[<span class="string">"red"</span>,<span class="string">"blue"</span>,<span class="string">"black"</span>]&#125;, &#123;_id: <span class="number">0</span>&#125;)</div><div class="line">&#123; <span class="string">"name"</span> : <span class="string">"wjh"</span>, <span class="string">"sex"</span> : <span class="number">1</span>, <span class="string">"age"</span> : <span class="number">18</span>, <span class="string">"color"</span> : [ <span class="string">"red"</span>, <span class="string">"blue"</span>, <span class="string">"black"</span> ] &#125;</div><div class="line">&gt; db.Student.find(&#123;<span class="string">"color.0"</span>:<span class="string">"white"</span>&#125;, &#123;_id: <span class="number">0</span>&#125;)</div><div class="line">&#123; <span class="string">"name"</span> : <span class="string">"lpj"</span>, <span class="string">"sex"</span> : <span class="number">1</span>, <span class="string">"age"</span> : <span class="number">22</span>, <span class="string">"color"</span> : [ <span class="string">"white"</span>, <span class="string">"blue"</span>, <span class="string">"black"</span> ] &#125;</div></pre></td></tr></table></figure>
+<ol>
+<li>排序</li>
+</ol>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">db.Student.find().sort(&#123;age:<span class="number">1</span>&#125;)</div><div class="line">db.Student.find().sort(&#123;age:<span class="number">1</span>, sex:<span class="number">1</span>&#125;)</div></pre></td></tr></table></figure>
+<ol>
+<li>分页</li>
+</ol>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">db.Student.find().sort(&#123;age:<span class="number">1</span>&#125;).limit(<span class="number">3</span>).skip(<span class="number">3</span>)</div></pre></td></tr></table></figure>
+<ol>
+<li>获取数量</li>
+</ol>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">db.Student.count() </div><div class="line">db.Student.find().count()</div></pre></td></tr></table></figure>
+<ol>
+<li>删除数据</li>
+</ol>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">db.Student.remove(&#123;age: <span class="number">22</span>&#125;)</div></pre></td></tr></table></figure>
+<ol>
+<li>新增数据</li>
+</ol>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">db.Student.insert(&#123;name: <span class="string">'sanduo'</span>, age: <span class="number">16</span>, sex: <span class="number">1</span>&#125;)</div></pre></td></tr></table></figure>
+<ol>
+<li>更新数据</li>
+</ol>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">db.Student.update(&#123;name: <span class="string">'sanduo'</span>&#125;, &#123;age: <span class="number">66</span>&#125;)</div><div class="line">db.Student.update(&#123;name: <span class="string">'sanduo'</span>&#125;, &#123;$inc: &#123;height : <span class="number">175</span>&#125;&#125;)     <span class="comment">//新增字段height</span></div><div class="line">db.Student.update(&#123;name: <span class="string">'sanduo'</span>&#125;, &#123;$inc: &#123;age : <span class="number">185</span>&#125;&#125;, <span class="literal">true</span>)  <span class="comment">//upsert存在则修改,不存在则新增</span></div></pre></td></tr></table></figure>
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
                 <a class="post-title-link" href="/2017/01/21/create-order-id/" itemprop="url">
                   生成唯一订单号（16位字符串）
                 </a>
@@ -267,7 +635,7 @@
               <i class="fa fa-calendar-o"></i>
             </span>
             <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2017-01-21T22:32:35+08:00" content="2017-01-21">
+            <time itemprop="dateCreated" datetime="2017-01-21T22:51:11+08:00" content="2017-01-21">
               2017-01-21
             </time>
           </span>
@@ -330,7 +698,7 @@
 <li>月份取值范围为01-12,所以这里取月份的16进制数（dechex）,减少位数</li>
 <li>时分秒,date(‘His’)所表达的结果其实就是000000到235959，而且其中很多数字不会被用到比如126998。一天86400秒，如果从一天的0:0:0算起直到23:59:59使用00000-86400就可以完全表示，这样下来我们就完全可以把date(‘His’)换成五位数字。既然time()函数就是按秒计数，那咱就取time()结果的后五位，同一天之内后五位不会重复出现，比如今天0:0:0后五位是98765，那么到今天23:59:59后五位就应该是98765+86400去掉最高位，相信这个应该是很好理解的</li>
 <li>随机数,秒小数点后取4位</li>
-<li>用户ID（userId）取后两位</li>
+<li>用户ID（userId）取后两位或取余</li>
 </ol>
 <p>代码如下:<br><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line"><span class="meta">&lt;?php</span></div><div class="line"><span class="comment">/**</span></div><div class="line"> * 随机生成唯一订单号码</div><div class="line"> *</div><div class="line"> * <span class="doctag">@param</span> int $userId</div><div class="line"> * <span class="doctag">@return</span> string</div><div class="line"> * <span class="doctag">@throws</span> Exception</div><div class="line"> */</div><div class="line"><span class="function"><span class="keyword">function</span> <span class="title">createOrderId</span><span class="params">($userId = <span class="number">0</span>)</span></span></div><div class="line">&#123;</div><div class="line">    <span class="keyword">if</span> (<span class="keyword">empty</span>($userId)) &#123;</div><div class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="keyword">Exception</span>(<span class="string">'用户ID错误, userId='</span> . $userId);</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">list</span>($ms, $time) = explode(<span class="string">' '</span>, microtime());</div><div class="line">    $year = date(<span class="string">'y'</span>, $time);   <span class="comment">//当前年份,2位数</span></div><div class="line">    $month = date(<span class="string">'m'</span>, $time);  <span class="comment">//当前月份,2为数,转为16进制只占一位</span></div><div class="line">    $day = date(<span class="string">'d'</span>, $time);    <span class="comment">//当前日期</span></div><div class="line">    <span class="keyword">return</span> $year . strtoupper(dechex($month)) . $day . substr($time, <span class="number">-5</span>) . substr($ms, <span class="number">2</span>, <span class="number">4</span>) . substr($userId, <span class="number">-2</span>);</div><div class="line">&#125;</div><div class="line"></div><div class="line">$userId = <span class="number">110003978</span>;</div><div class="line"><span class="keyword">for</span> ($i = <span class="number">0</span>; $i &lt; <span class="number">10</span>; $i++) &#123;</div><div class="line">    <span class="keyword">echo</span> createOrderId($userId) . PHP_EOL;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
 
@@ -1460,253 +1828,6 @@
 
 
     
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2016/11/14/php-closure/" itemprop="url">
-                  PHP闭包
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-11-14T18:56:22+08:00" content="2016-11-14">
-              2016-11-14
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/PHP/" itemprop="url" rel="index">
-                    <span itemprop="name">PHP</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                &nbsp; | &nbsp;
-                <a href="/2016/11/14/php-closure/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/11/14/php-closure/" itemprop="commentsCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-
-          
-          
-
-          
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>php的闭包（Closure）也就是匿名函数。是PHP5.3引入的。<br><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="meta">&lt;?php</span></div><div class="line">    $a = <span class="function"><span class="keyword">function</span><span class="params">()</span> <span class="title">use</span> <span class="params">($b)</span> </span>&#123;</div><div class="line">    </div><div class="line">    &#125;</div></pre></td></tr></table></figure></p>
-<h4 id="闭包的几个作用"><a href="#闭包的几个作用" class="headerlink" title="闭包的几个作用:"></a>闭包的几个作用:</h4><ol>
-<li>减少foreach的循环的代码</li>
-<li>减少函数的参数</li>
-<li>解除递归函数</li>
-<li>关于延迟绑定</li>
-</ol>
-<h4 id="减少foreach的循环的代码"><a href="#减少foreach的循环的代码" class="headerlink" title="减少foreach的循环的代码"></a>减少foreach的循环的代码</h4><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">function</span> <span class="title">myFunction</span><span class="params">($value, $key)</span> </span>&#123;</div><div class="line">    <span class="keyword">echo</span> <span class="string">"The key $key has the value $value"</span> . PHP_EOL;</div><div class="line">&#125;</div><div class="line">$arr = [</div><div class="line">    <span class="string">'a'</span> =&gt; <span class="string">'red'</span>,</div><div class="line">    <span class="string">'b'</span> =&gt; <span class="string">'blue'</span>,</div><div class="line">    <span class="string">'c'</span> =&gt; <span class="string">'yellow'</span>,</div><div class="line">];</div><div class="line">array_walk($arr, <span class="string">"myFunction"</span>);</div></pre></td></tr></table></figure>
-<h4 id="减少函数的参数"><a href="#减少函数的参数" class="headerlink" title="减少函数的参数"></a>减少函数的参数</h4><h4 id="解除递归函数"><a href="#解除递归函数" class="headerlink" title="解除递归函数"></a>解除递归函数</h4><h4 id="关于延迟绑定"><a href="#关于延迟绑定" class="headerlink" title="关于延迟绑定"></a>关于延迟绑定</h4><h4 id="本文参考"><a href="#本文参考" class="headerlink" title="本文参考"></a>本文参考</h4><p><a href="http://www.cnblogs.com/yjf512/archive/2012/10/29/2744702.html" target="_blank" rel="external">轩脉刃de刀光剑影</a></p>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2016/11/14/php-extend/" itemprop="url">
-                  PHP扩展开发入门
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-11-14T18:31:39+08:00" content="2016-11-14">
-              2016-11-14
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/PHP/" itemprop="url" rel="index">
-                    <span itemprop="name">PHP</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                &nbsp; | &nbsp;
-                <a href="/2016/11/14/php-extend/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/11/14/php-extend/" itemprop="commentsCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-
-          
-          
-
-          
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h1 id="一级标题"><a href="#一级标题" class="headerlink" title="一级标题"></a>一级标题</h1>
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -1752,7 +1873,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">11</span>
+              <span class="site-state-item-count">13</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
@@ -1760,7 +1881,7 @@
           
             <div class="site-state-item site-state-categories">
               <a href="/categories">
-                <span class="site-state-item-count">4</span>
+                <span class="site-state-item-count">6</span>
                 <span class="site-state-item-name">分类</span>
               </a>
             </div>
@@ -1769,7 +1890,7 @@
           
             <div class="site-state-item site-state-tags">
               <a href="/tags">
-                <span class="site-state-item-count">7</span>
+                <span class="site-state-item-count">11</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
