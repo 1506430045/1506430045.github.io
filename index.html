@@ -253,6 +253,173 @@
             
               
                 
+                <a class="post-title-link" href="/2017/02/20/php-demo/" itemprop="url">
+                  PHP7新特性
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2017-02-20T19:02:03+08:00" content="2017-02-20">
+              2017-02-20
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/PHP7/" itemprop="url" rel="index">
+                    <span itemprop="name">PHP7</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2017/02/20/php-demo/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2017/02/20/php-demo/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h4 id="PHP-标量类型与返回值类型声明"><a href="#PHP-标量类型与返回值类型声明" class="headerlink" title="PHP 标量类型与返回值类型声明"></a>PHP 标量类型与返回值类型声明</h4><p>默认情况下，所有的PHP文件都处于弱类型校验模式。</p>
+<p>PHP7增加了标量类型声明的特性，标量类型声明有两种模式:</p>
+<pre><code>1. 强制模式 (默认)
+2. 严格模式 (强类型)
+</code></pre><p>参数类型:int、 string、 float、 bool、 interfaces、 array、 callable<br>代码示例:<br><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">declare</span>(strict_types=<span class="number">1</span>);    <span class="comment">//开启严格模式</span></div><div class="line"><span class="function"><span class="keyword">function</span> <span class="title">sum</span><span class="params">(int ...$ints)</span> </span></div><div class="line">&#123; </div><div class="line">    <span class="keyword">return</span> array_sum($ints); </div><div class="line">&#125; </div><div class="line"></div><div class="line"><span class="keyword">print</span>(sum(<span class="number">2</span>, <span class="string">'3'</span>, <span class="number">4.1</span>));    <span class="comment">//PHP Fatal error:  Uncaught TypeError: Argument 2 passed to sum() must be of the type integer, string given, called in.....</span></div><div class="line"><span class="keyword">print</span>(sum(<span class="number">1</span>, <span class="number">3</span>, <span class="number">6</span>));        <span class="comment">//正确</span></div></pre></td></tr></table></figure></p>
+<h4 id="PHP-NULL-合并运算符"><a href="#PHP-NULL-合并运算符" class="headerlink" title="PHP NULL 合并运算符"></a>PHP NULL 合并运算符</h4><p>PHP7新增加的 NULL 合并运算符（??）是用于执行isset()检测的三元运算的快捷方式。<br>NULL 合并运算符会判断变量是否存在且值不为NULL，如果是，它就会返回自身的值，否则返回它的第二个操作数。<br>代码示例:<br><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">$site = <span class="keyword">isset</span>($_GET[<span class="string">'site'</span>]) ? $_GET[<span class="string">'site'</span>] : <span class="string">'菜鸟教程'</span>;  <span class="comment">//PHP7前写法</span></div><div class="line">$site = $_GET[<span class="string">'site'</span>] ?? <span class="string">'菜鸟教程'</span>;    <span class="comment">//PHP7 NULL合并运算符 ??</span></div></pre></td></tr></table></figure></p>
+<h4 id="PHP-太空船运算符（组合比较符）"><a href="#PHP-太空船运算符（组合比较符）" class="headerlink" title="PHP 太空船运算符（组合比较符）"></a>PHP 太空船运算符（组合比较符）</h4><p>PHP 7 新增加的太空船运算符（组合比较符）用于比较两个表达式 $a 和 $b，如果 $a 小于、等于或大于 $b时，它分别返回-1、0或1。</p>
+<p>代码示例:<br><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="comment">//整型比较</span></div><div class="line"><span class="keyword">print</span>( <span class="number">1</span> &lt;=&gt; <span class="number">1</span>);<span class="keyword">print</span>(PHP_EOL); <span class="comment">//返回0</span></div><div class="line"><span class="keyword">print</span>( <span class="number">1</span> &lt;=&gt; <span class="number">2</span>);<span class="keyword">print</span>(PHP_EOL); <span class="comment">//返回-1</span></div><div class="line"><span class="keyword">print</span>( <span class="number">2</span> &lt;=&gt; <span class="number">1</span>);<span class="keyword">print</span>(PHP_EOL); <span class="comment">//返回1</span></div></pre></td></tr></table></figure></p>
+<h4 id="PHP-常量数组"><a href="#PHP-常量数组" class="headerlink" title="PHP 常量数组"></a>PHP 常量数组</h4><p>在PHP5.6中仅能通过 const 定义常量数组，PHP7 可以通过 define() 来定义。</p>
+<p>代码示例:<br><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">define(<span class="string">'sites'</span>, [</div><div class="line">    <span class="string">'baidu'</span>,</div><div class="line">    <span class="string">'qq'</span>,</div><div class="line">    <span class="string">'google'</span></div><div class="line">    <span class="string">'taobao'</span></div><div class="line">]);</div></pre></td></tr></table></figure></p>
+<h4 id="PHP-匿名类"><a href="#PHP-匿名类" class="headerlink" title="PHP 匿名类"></a>PHP 匿名类</h4><p>PHP7支持通过 new class 来实例化一个匿名类，这可以用来替代一些”用后即焚”的完整类定义。</p>
+<p>代码示例:<br><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">interface</span> <span class="title">Logger</span> </span></div><div class="line">&#123; </div><div class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">log</span><span class="params">(string $msg)</span></span>; </div><div class="line">&#125; </div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Application</span> </span></div><div class="line">&#123; </div><div class="line">    <span class="keyword">private</span> $logger; </div><div class="line"></div><div class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">getLogger</span><span class="params">()</span>: <span class="title">Logger</span> </span></div><div class="line">    &#123; </div><div class="line">        <span class="keyword">return</span> <span class="keyword">$this</span>-&gt;logger; </div><div class="line">    &#125; </div><div class="line"></div><div class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">setLogger</span><span class="params">(Logger $logger)</span> </span></div><div class="line">    &#123; </div><div class="line">        <span class="keyword">$this</span>-&gt;logger = $logger; </div><div class="line">    &#125;   </div><div class="line">&#125; </div><div class="line"></div><div class="line">$app = <span class="keyword">new</span> Application; </div><div class="line"><span class="comment">//使用 new class 创建匿名类 </span></div><div class="line">$app-&gt;setLogger(<span class="keyword">new</span> <span class="class"><span class="keyword">class</span> <span class="keyword">implements</span> <span class="title">Logger</span> </span>&#123; </div><div class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">log</span><span class="params">(string $msg)</span> </span>&#123;</div><div class="line">        error_log($msg . PHP_EOL, <span class="number">3</span>, <span class="string">'my_xiangqian.log'</span>);</div><div class="line">        <span class="keyword">print</span>($msg); </div><div class="line">    &#125; </div><div class="line">&#125;); </div><div class="line">$app-&gt;getLogger()-&gt;log(<span class="string">"我的第一条日志"</span>);</div></pre></td></tr></table></figure></p>
+<h4 id="PHP-Closure-call"><a href="#PHP-Closure-call" class="headerlink" title="PHP Closure::call()"></a>PHP Closure::call()</h4><p>PHP 7 的 Closure::call() 有着更好的性能，将一个闭包函数动态绑定到一个新的对象实例并调用执行该函数。</p>
+<p>代码示例:<br><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">A</span> </span></div><div class="line">&#123;</div><div class="line">    <span class="keyword">private</span> $x = <span class="number">1</span>;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="comment">//PHP7之前定义闭包函数代码</span></div><div class="line">$getXCB = <span class="function"><span class="keyword">function</span><span class="params">()</span> </span></div><div class="line">&#123;</div><div class="line">    <span class="keyword">return</span> <span class="keyword">$this</span>-&gt;x;</div><div class="line">&#125;</div><div class="line"><span class="comment">//闭包函数绑定到类A上</span></div><div class="line">$getX = $getXCB-&gt;bindTo(<span class="keyword">new</span> A, <span class="string">'A'</span>);</div><div class="line"><span class="keyword">echo</span> $getX . PHP_EOL;</div><div class="line"></div><div class="line"><span class="comment">//PHP7+代码</span></div><div class="line">$getX = <span class="function"><span class="keyword">function</span><span class="params">()</span></span></div><div class="line">&#123;</div><div class="line">    <span class="keyword">return</span> <span class="keyword">$this</span>-&gt;x; </div><div class="line">&#125;</div><div class="line"><span class="keyword">echo</span> $getX-&gt;call(<span class="keyword">new</span> A) . PHP_EOL;</div></pre></td></tr></table></figure></p>
+<h4 id="PHP-过滤-unserialize"><a href="#PHP-过滤-unserialize" class="headerlink" title="PHP 过滤 unserialize()"></a>PHP 过滤 unserialize()</h4><h4 id="PHP-IntlChar"><a href="#PHP-IntlChar" class="headerlink" title="PHP IntlChar()"></a>PHP IntlChar()</h4><h4 id="PHP-CSPRNG"><a href="#PHP-CSPRNG" class="headerlink" title="PHP CSPRNG"></a>PHP CSPRNG</h4><h4 id="PHP7-异常"><a href="#PHP7-异常" class="headerlink" title="PHP7 异常"></a>PHP7 异常</h4><h4 id="PHP7-use-语句"><a href="#PHP7-use-语句" class="headerlink" title="PHP7 use 语句"></a>PHP7 use 语句</h4><p>PHP7可以使用一个 use 从同一个 namespace 中导入类、函数和常量<br>示例代码:<br><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line"><span class="comment">//PHP7之前版本需要使用多次 use </span></div><div class="line"><span class="keyword">use</span> <span class="title">some</span>\<span class="title">namespace</span>\<span class="title">ClassA</span>; </div><div class="line"><span class="keyword">use</span> <span class="title">some</span>\<span class="title">namespace</span>\<span class="title">ClassB</span>; </div><div class="line"><span class="keyword">use</span> <span class="title">some</span>\<span class="title">namespace</span>\<span class="title">ClassC</span> <span class="title">as</span> <span class="title">C</span>; </div><div class="line"></div><div class="line"><span class="keyword">use</span> <span class="title">function</span> <span class="title">some</span>\<span class="title">namespace</span>\<span class="title">fn_a</span>; </div><div class="line"><span class="keyword">use</span> <span class="title">function</span> <span class="title">some</span>\<span class="title">namespace</span>\<span class="title">fn_b</span>; </div><div class="line"><span class="keyword">use</span> <span class="title">function</span> <span class="title">some</span>\<span class="title">namespace</span>\<span class="title">fn_c</span>; </div><div class="line"></div><div class="line"><span class="keyword">use</span> <span class="title">const</span> <span class="title">some</span>\<span class="title">namespace</span>\<span class="title">ConstA</span>; </div><div class="line"><span class="keyword">use</span> <span class="title">const</span> <span class="title">some</span>\<span class="title">namespace</span>\<span class="title">ConstB</span>; </div><div class="line"><span class="keyword">use</span> <span class="title">const</span> <span class="title">some</span>\<span class="title">namespace</span>\<span class="title">ConstC</span>;</div><div class="line"></div><div class="line"><span class="comment">//PHP7+之后版本可以使用一个 use 导入同一个 namespace 的类 </span></div><div class="line"><span class="keyword">use</span> <span class="title">some</span>\<span class="title">namespace</span>\&#123;<span class="title">ClassA</span>, <span class="title">ClassB</span>, <span class="title">ClassC</span> <span class="title">as</span> <span class="title">C</span>&#125;; </div><div class="line"><span class="keyword">use</span> <span class="title">function</span> <span class="title">some</span>\<span class="title">namespace</span>\&#123;<span class="title">fn_a</span>, <span class="title">fn_b</span>, <span class="title">fn_c</span>&#125;; </div><div class="line"><span class="keyword">use</span> <span class="title">const</span> <span class="title">some</span>\<span class="title">namespace</span>\&#123;<span class="title">ConstA</span>, <span class="title">ConstB</span>, <span class="title">ConstC</span>&#125;;</div></pre></td></tr></table></figure></p>
+<h4 id="PHP7-错误处理"><a href="#PHP7-错误处理" class="headerlink" title="PHP7 错误处理"></a>PHP7 错误处理</h4><p>PHP 7 改变了大多数错误的报告方式。不同于 PHP 5 的传统错误报告机制，现在大多数错误被作为 Error 异常抛出。<br>这种 Error 异常可以像普通异常一样被 try / catch 块所捕获。如果没有匹配的 try / catch 块， 则调用异常处理函数（由 set_exception_handler() 注册）进行处理。 如果尚未注册异常处理函数，则按照传统方式处理：被报告为一个致命错误（Fatal Error）。<br>Error 类并不是从 Exception 类 扩展出来的，所以用 catch (Exception $e) { … } 这样的代码是捕获不 到 Error 的。你可以用 catch (Error $e) { … } 这样的代码，或者通过注册异常处理函数（ set_exception_handler()）来捕获 Error。</p>
+<p>示例代码:<br><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">MathDemo</span></span></div><div class="line">&#123;</div><div class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">doOperation</span><span class="params">(float $a, float $b)</span> : <span class="title">float</span></span></div><div class="line">    &#123;</div><div class="line">        <span class="keyword">try</span> &#123;</div><div class="line">            <span class="keyword">return</span> $a % $b;</div><div class="line">        &#125; <span class="keyword">catch</span> (DivisionByZeroError $e) &#123;</div><div class="line">            <span class="keyword">return</span> <span class="number">0</span>;</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line">$obj = <span class="keyword">new</span> MathDemo();</div><div class="line"><span class="keyword">echo</span> $obj-&gt;doOperation(<span class="number">10</span>, <span class="number">0</span>) . PHP_EOL;</div></pre></td></tr></table></figure></p>
+<h4 id="PHP-intdiv-函数"><a href="#PHP-intdiv-函数" class="headerlink" title="PHP intdiv() 函数"></a>PHP intdiv() 函数</h4><p>PHP 7 新增加了 intdiv() 函数，接收两个参数，返回值为第一个参数除于第二个参数的值并取整。</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">echo</span> intdiv(<span class="number">9</span>,<span class="number">3</span>),PHP_EOL;   <span class="comment">//3</span></div><div class="line"><span class="keyword">echo</span> intdiv(<span class="number">10</span>,<span class="number">3</span>),PHP_EOL;  <span class="comment">//2</span></div><div class="line"><span class="keyword">echo</span> intdiv(<span class="number">5</span>,<span class="number">10</span>),PHP_EOL;  <span class="comment">//0</span></div></pre></td></tr></table></figure>
+<h4 id="PHP7-Session-选项"><a href="#PHP7-Session-选项" class="headerlink" title="PHP7 Session 选项"></a>PHP7 Session 选项</h4><h4 id="PHP7-废弃特性"><a href="#PHP7-废弃特性" class="headerlink" title="PHP7 废弃特性"></a>PHP7 废弃特性</h4><ol>
+<li>PHP4 风格的构造函数</li>
+<li>以静态的方式调用非静态方法</li>
+<li>password_hash() 随机因子选项</li>
+<li>capture_session_meta SSL 上下文选项</li>
+</ol>
+<h4 id="PHP7-移除的扩展"><a href="#PHP7-移除的扩展" class="headerlink" title="PHP7 移除的扩展"></a>PHP7 移除的扩展</h4><ol>
+<li>ereg</li>
+<li>mssql</li>
+<li>mysql</li>
+<li>sybase_ct</li>
+</ol>
+<h4 id="PHP7-移除的-SAPI"><a href="#PHP7-移除的-SAPI" class="headerlink" title="PHP7 移除的 SAPI"></a>PHP7 移除的 SAPI</h4><ol>
+<li>aolserver</li>
+<li>apache</li>
+<li>apache_hooks</li>
+<li>apache2filter</li>
+<li>caudium</li>
+<li>continuity</li>
+<li>isapi</li>
+<li>milter</li>
+<li>nsapi</li>
+<li>phttpd</li>
+<li>pi3web</li>
+<li>roxen</li>
+<li>thttpd</li>
+<li>tux</li>
+<li>webjames</li>
+</ol>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
                 <a class="post-title-link" href="/2017/02/19/distributed-system-redis-lock/" itemprop="url">
                   用Redis构建分布式锁
                 </a>
@@ -1537,236 +1704,6 @@
 
 
     
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2016/11/15/php-string-function/" itemprop="url">
-                  PHP字符串操作函数归纳
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-11-15T12:12:51+08:00" content="2016-11-15">
-              2016-11-15
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/PHP/" itemprop="url" rel="index">
-                    <span itemprop="name">PHP</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                &nbsp; | &nbsp;
-                <a href="/2016/11/15/php-string-function/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/11/15/php-string-function/" itemprop="commentsCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-
-          
-          
-
-          
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>PHP 字符串函数是 PHP 核心的组成部分。</p>
-<h4 id="最常用函数"><a href="#最常用函数" class="headerlink" title="最常用函数:"></a>最常用函数:</h4><ol>
-<li>substr</li>
-<li>substr_compare</li>
-<li>substr_count</li>
-<li>substr_replace</li>
-<li>trim</li>
-<li>ucfirst</li>
-<li>ucwords</li>
-<li>strlen</li>
-<li>strcmp</li>
-<li>echo</li>
-<li>explode</li>
-<li>join</li>
-<li>ltrim</li>
-<li>md5</li>
-<li>ord</li>
-<li>print</li>
-<li>printf</li>
-<li>rtrim</li>
-<li>addslashes</li>
-<li>strtolower</li>
-<li>strtoupper</li>
-<li>strrev</li>
-<li>strstr</li>
-<li>strpos</li>
-<li>str_replace</li>
-<li>str_repeat</li>
-<li>str_shuffle</li>
-<li>str_split</li>
-<li>strcasecmp</li>
-<li>strchr strstr的别名</li>
-<li>strcmp</li>
-<li>addcslashes</li>
-<li>chop</li>
-<li>chr</li>
-<li>crc32</li>
-<li>crypt</li>
-<li>nl2br</li>
-<li>parse_str</li>
-<li>htmlspecialchars</li>
-<li>implode</li>
-<li>strip_tags</li>
-<li>stripcslashes</li>
-<li>stripslashes</li>
-<li>str_pad</li>
-<li>str_ireplace</li>
-<li>htmlentities</li>
-</ol>
-<h4 id="比较"><a href="#比较" class="headerlink" title="比较:"></a>比较:</h4><ol>
-<li>strcoll</li>
-<li>strnatcasecmp</li>
-<li>strnatcmp</li>
-<li>strncasecmp</li>
-<li>strncmp</li>
-</ol>
-<h4 id="格式化"><a href="#格式化" class="headerlink" title="格式化:"></a>格式化:</h4><ol>
-<li>fprintf</li>
-<li>money_format</li>
-<li>number_format</li>
-<li>sprintf</li>
-<li>vfprintf</li>
-<li>vprintf</li>
-<li>vsprintf</li>
-</ol>
-<h4 id="编码"><a href="#编码" class="headerlink" title="编码:"></a>编码:</h4><ol>
-<li>convert_uudecode</li>
-<li>convert_uuencode</li>
-<li>str_rot13</li>
-</ol>
-<h4 id="查找"><a href="#查找" class="headerlink" title="查找:"></a>查找:</h4><ol>
-<li>strcspn</li>
-<li>stristr</li>
-<li>strpbrk</li>
-<li>stripos</li>
-<li>strrchr</li>
-<li>strripos</li>
-<li>strrpos</li>
-</ol>
-<h4 id="其他"><a href="#其他" class="headerlink" title="其他:"></a>其他:</h4><ol>
-<li>bin2hex</li>
-<li>chunk_split</li>
-<li>convert_cyr_string</li>
-<li>count_chars</li>
-<li>get_html_translation_table</li>
-<li>hebrev</li>
-<li>hebrevc</li>
-<li>hex2bin</li>
-<li>html_entity_decode</li>
-<li>htmlspecialchars_decode</li>
-<li>lcfirst</li>
-<li>levenshtein</li>
-<li>localeconv</li>
-<li>md5_file</li>
-<li>metaphone</li>
-<li>nl_langinfo</li>
-<li>quoted_printable_decode</li>
-<li>quoted_printable_encode</li>
-<li>quotemeta</li>
-<li>setlocale</li>
-<li>sha1</li>
-<li>sha1_file</li>
-<li>similar_text</li>
-<li>soundex</li>
-<li>sscanf</li>
-<li>str_getcsv</li>
-<li>str_word_count</li>
-<li>strspn</li>
-<li>strtok</li>
-<li>strtr</li>
-</ol>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -1812,7 +1749,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">15</span>
+              <span class="site-state-item-count">16</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
@@ -1820,7 +1757,7 @@
           
             <div class="site-state-item site-state-categories">
               <a href="/categories">
-                <span class="site-state-item-count">7</span>
+                <span class="site-state-item-count">8</span>
                 <span class="site-state-item-name">分类</span>
               </a>
             </div>
@@ -1829,7 +1766,7 @@
           
             <div class="site-state-item site-state-tags">
               <a href="/tags">
-                <span class="site-state-item-count">14</span>
+                <span class="site-state-item-count">15</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
