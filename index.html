@@ -253,6 +253,236 @@
             
               
                 
+                <a class="post-title-link" href="/2017/12/19/redis-lua-lock/" itemprop="url">
+                  Redis+Lua锁
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2017-12-19T19:44:39+08:00" content="2017-12-19">
+              2017-12-19
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/PHP/" itemprop="url" rel="index">
+                    <span itemprop="name">PHP</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>一、Redis单例<br><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div></pre></td><td class="code"><pre><div class="line"><span class="comment">/**</span></div><div class="line"> * Redis单例</div><div class="line"> *</div><div class="line"> * User: xiangqian</div><div class="line"> * Date: 17/8/3</div><div class="line"> * Time: 下午3:40</div><div class="line"> */</div><div class="line"><span class="keyword">namespace</span> <span class="title">Model</span>\<span class="title">Redis</span>;</div><div class="line"></div><div class="line"><span class="keyword">use</span> \<span class="title">Redis</span>;</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">BaseModel</span></span></div><div class="line">&#123;</div><div class="line">    <span class="keyword">private</span> <span class="keyword">static</span> $_instances = [];</div><div class="line">    <span class="keyword">public</span> $redis;</div><div class="line"></div><div class="line">    <span class="comment">/**</span></div><div class="line">     * 构造方法</div><div class="line">     *</div><div class="line">     * BaseModel constructor.</div><div class="line">     * <span class="doctag">@param</span> array $config</div><div class="line">     */</div><div class="line">    <span class="keyword">private</span> <span class="function"><span class="keyword">function</span> <span class="title">__construct</span><span class="params">(array $config)</span></span></div><div class="line">    &#123;</div><div class="line">        <span class="keyword">try</span> &#123;</div><div class="line">            <span class="keyword">$this</span>-&gt;redis = <span class="keyword">new</span> Redis();</div><div class="line">            <span class="keyword">$this</span>-&gt;redis-&gt;connect($config[<span class="string">'host'</span>], $config[<span class="string">'port'</span>], $config[<span class="string">'time_out'</span>]);</div><div class="line">            <span class="keyword">$this</span>-&gt;redis-&gt;auth($config[<span class="string">'auth'</span>]);</div><div class="line">        &#125; <span class="keyword">catch</span> (\RedisException $e) &#123;</div><div class="line">            <span class="keyword">exit</span>($e-&gt;getMessage());</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="comment">/**</span></div><div class="line">     * 获取实例</div><div class="line">     *</div><div class="line">     * <span class="doctag">@param</span> array $config</div><div class="line">     * <span class="doctag">@return</span> BaseModel</div><div class="line">     */</div><div class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="function"><span class="keyword">function</span> <span class="title">getInstance</span><span class="params">(array $config)</span></span></div><div class="line">    &#123;</div><div class="line">        ksort($config);</div><div class="line">        $key = md5(serialize($config));</div><div class="line">        <span class="keyword">if</span> (<span class="keyword">isset</span>(<span class="keyword">self</span>::$_instances[$key]) &amp;&amp; <span class="keyword">self</span>::$_instances[$key] <span class="keyword">instanceof</span> <span class="keyword">self</span>) &#123;</div><div class="line">            <span class="keyword">return</span> <span class="keyword">self</span>::$_instances[$key];</div><div class="line">        &#125;</div><div class="line">        <span class="keyword">self</span>::$_instances[$key] = <span class="keyword">new</span> <span class="keyword">self</span>($config);</div><div class="line">        <span class="keyword">return</span> <span class="keyword">self</span>::$_instances[$key];</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="comment">/**</span></div><div class="line">     * 禁止克隆</div><div class="line">     */</div><div class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">__clone</span><span class="params">()</span></span></div><div class="line">    &#123;</div><div class="line">        trigger_error(<span class="string">'can not clone'</span>, E_USER_ERROR);</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>二、Redis + Lua锁实现<br><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div></pre></td><td class="code"><pre><div class="line"><span class="comment">/**</span></div><div class="line"> * Redis + Lua实现锁</div><div class="line"> *</div><div class="line"> * User: xiangqian</div><div class="line"> * Date: 17/12/19</div><div class="line"> * Time: 下午5:14</div><div class="line"> */</div><div class="line"></div><div class="line"><span class="keyword">namespace</span> <span class="title">Model</span>\<span class="title">Redis</span>;</div><div class="line"></div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Lock</span></span></div><div class="line">&#123;</div><div class="line">    <span class="keyword">private</span> <span class="keyword">static</span> $redisConfig = [</div><div class="line">        <span class="string">'host'</span> =&gt; <span class="string">'127.0.0.1'</span>,</div><div class="line">        <span class="string">'port'</span> =&gt; <span class="number">6379</span>,</div><div class="line">        <span class="string">'time_out'</span> =&gt; <span class="number">1</span>,</div><div class="line">        <span class="string">'auth'</span> =&gt; <span class="string">'123456'</span></div><div class="line">    ];</div><div class="line"></div><div class="line">    <span class="comment">/**</span></div><div class="line">     * 加锁</div><div class="line">     *</div><div class="line">     * <span class="doctag">@param</span> $key</div><div class="line">     * <span class="doctag">@param</span> $token</div><div class="line">     * <span class="doctag">@param</span> int $ttl</div><div class="line">     * <span class="doctag">@return</span> int</div><div class="line">     */</div><div class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="function"><span class="keyword">function</span> <span class="title">lock</span><span class="params">($key, $token, $ttl = <span class="number">100</span>)</span></span></div><div class="line">    &#123;</div><div class="line">        $script = <span class="string">'</span></div><div class="line">            local ok = redis.call("setnx", KEYS[1], ARGV[1])</div><div class="line">            if ok == 1 then</div><div class="line">                redis.call("expire", KEYS[1], ARGV[2])</div><div class="line">            end</div><div class="line">            return ok';</div><div class="line">        <span class="keyword">return</span> BaseModel::getInstance(<span class="keyword">self</span>::$redisConfig)-&gt;redis-&gt;eval($script, [$key, $token, $ttl], <span class="number">1</span>);</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="comment">/**</span></div><div class="line">     * 释放锁</div><div class="line">     *</div><div class="line">     * <span class="doctag">@param</span> $key</div><div class="line">     * <span class="doctag">@param</span> $token</div><div class="line">     * <span class="doctag">@return</span> int</div><div class="line">     */</div><div class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="function"><span class="keyword">function</span> <span class="title">unlock</span><span class="params">($key, $token)</span></span></div><div class="line">    &#123;</div><div class="line">        $script = <span class="string">'</span></div><div class="line">            if redis.call("get",KEYS[1]) == ARGV[1]</div><div class="line">            then    </div><div class="line">                return redis.call("del",KEYS[1])</div><div class="line">            else    </div><div class="line">                return 0</div><div class="line">            end';</div><div class="line">        <span class="keyword">return</span> BaseModel::getInstance(<span class="keyword">self</span>::$redisConfig)-&gt;redis-&gt;eval($script, [$key, $token], <span class="number">1</span>);</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>三、使用示例<br><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">$key = <span class="string">'test_key'</span>;              <span class="comment">//根据业务定名称</span></div><div class="line">$token = uniqid($key);          <span class="comment">//每个请求生成唯一的token, 防止被别的请求释放锁</span></div><div class="line">Lock::lock($key, $token, <span class="number">60</span>);   <span class="comment">//加锁</span></div><div class="line"><span class="comment">#do something with lock</span></div><div class="line">Lock::unlock($key, $token);     <span class="comment">//释放锁</span></div></pre></td></tr></table></figure></p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
+                <a class="post-title-link" href="/2017/06/27/linux-command/" itemprop="url">
+                  Linux常用命令,备忘（不完全）
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2017-06-27T11:59:21+08:00" content="2017-06-27">
+              2017-06-27
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/Linux/" itemprop="url" rel="index">
+                    <span itemprop="name">Linux</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>lsof -i:4000    查看指定端口的进程</p>
+<p>split           文件拆分<br>usage: split [-a sufflen] [-b byte_count] [-l line_count] [-p pattern]  [file [prefix]]</p>
+<p>cat small_files* &gt; large_file   文件进行合并</p>
+
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
                 <a class="post-title-link" href="/2017/02/20/php-demo/" itemprop="url">
                   PHP7新特性
                 </a>
@@ -655,119 +885,6 @@
 <p>管道和事务是不同的，pipeline只是表达“交互”中操作的传递的方向性，pipeline也可以在事务中运行，也可以不在。无论如何，pipeline中发送的每个command都会被server立即执行，如果执行失败，将会在此后的相应中得到信息；也就是pipeline并不是表达“所有command都一起成功”的语义，管道中前面命令失败，后面命令不会有影响，继续执行。简单来说就是管道中的命令是没有关系的，它们只是像管道一样流水发给server，而不是串行执行，仅此而已；但是如果pipeline的操作被封装在事务中，那么将有事务来确保操作的成功与失败。</p>
 <p>使用管道可能在效率上比使用script要好，但是有的情况下只能使用script。因为在执行后面的命令时，无法得到前面命令的结果，就像事务一样，所以如果需要在后面命令中使用前面命令的value等结果，则只能使用script或者事务+watch。</p>
 <h4 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h4><p><a href="http://blog.csdn.net/fangjian1204/article/details/50585080" target="_blank" rel="external">redis中的事务、lua脚本和管道的使用场景</a></p>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2017/02/19/linux-command/" itemprop="url">
-                  Linux常用命令,备忘（不完全）
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2017-02-19T17:46:23+08:00" content="2017-02-19">
-              2017-02-19
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/Linux/" itemprop="url" rel="index">
-                    <span itemprop="name">Linux</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-
-          
-          
-
-          
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>lsof -i:4000    查看指定端口的进程</p>
 
           
         
@@ -1517,123 +1634,6 @@
 
 
     
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2016/11/15/mysql-stock-over/" itemprop="url">
-                  mysql防止库存超卖
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-11-15T15:11:34+08:00" content="2016-11-15">
-              2016-11-15
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/PHP/" itemprop="url" rel="index">
-                    <span itemprop="name">PHP</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-
-          
-          
-
-          
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>电商系统经常会有各种活动,如团购、秒杀、特价。活动商品库存有限,面对段时间成千上万的用户抢购,怎么保证商品不会超卖?</p>
-<h4 id="例子"><a href="#例子" class="headerlink" title="例子"></a>例子</h4><p>商品ID:1<br>总库存:20个<br>请求人:a(购买5个)、b（购买10个）、c（购买6个）<br>分析:由于5+10+6=21大于总库存,所以必定第三人不能购买成功,否则库存超卖</p>
-<ol>
-<li>常规代码</li>
-</ol>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -1679,7 +1679,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">16</span>
+              <span class="site-state-item-count">17</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
