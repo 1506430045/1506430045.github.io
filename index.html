@@ -253,6 +253,119 @@
             
               
                 
+                <a class="post-title-link" href="/2017/12/21/可变参数/" itemprop="url">
+                  PHP可变参数
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2017-12-21T21:31:43+08:00" content="2017-12-21">
+              2017-12-21
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/PHP/" itemprop="url" rel="index">
+                    <span itemprop="name">PHP</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>PHP Redis扩展的zRem、sRem等删除多个元素时传可变参数数组</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="comment">#定义: public function zRem( $key, $member1, $member2 = null, $memberN = null ) &#123;&#125;</span></div><div class="line"></div><div class="line"><span class="comment">#示例</span></div><div class="line">$members = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>];</div><div class="line">$res = <span class="keyword">$this</span>-&gt;redis-&gt;zRem(<span class="string">'wq21212'</span>, ...$members);</div><div class="line">var_dump($res);</div></pre></td></tr></table></figure>
+          
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
                 <a class="post-title-link" href="/2017/12/21/mysql-stock-over/" itemprop="url">
                   Mysql防止库存超卖
                 </a>
@@ -1478,126 +1591,6 @@
 
 
     
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2017/01/15/php-multi-process-pcntl/" itemprop="url">
-                  PHP多进程（进程控制扩展pcntl）
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2017-01-15T22:21:18+08:00" content="2017-01-15">
-              2017-01-15
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/PHP/" itemprop="url" rel="index">
-                    <span itemprop="name">PHP</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-
-          
-          
-
-          
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>PHP是一门较早出现的WEB开发脚本语言，并由于其语法结构简单、易学、开源等特性迅速占领WEB开发脚本语言领域，并成为这个领域的龙头老大直至今日。PHP从一出生就被设计用来快速开发WEB应用，这也注定了它在某些方面的先天不足，例如在cli环境下处理大量数据的情况，或者在并发编程方面，都显得力不从心。</p>
-<p>本文主要讲解基于PCNTL的PHP并发编程，虽然PHP本身不支持多进程，但基于Linux的PHP扩展PCNTL却可以提供多进程编程。网络上很多同类文章，但笔者进行多次尝试后发现，不是难以控制进程数量，就是有潜在产生僵尸进程或孤儿进程的危险，或者父进程阻塞难以获得更大的并发效果，且大多没有介绍FORK的原理，使得PHP程序员学习PCNTL并发编程尤为困难。本文力求解决这个问题。</p>
-<p>FORK编程的大概原理是，每次调用fork函数，操作系统就会产生一个子进程，儿子进程所有的堆栈信息都是原封不动复制父进程的，而在fork之后，父进程与子进程实际上是相互独立的，父子进程不会相互影响。也就是说，fork调用位置之前的所有变量，父进程和子进程是一样的，但fork之后则取决于各自的动作，且数据也是独立的；因为数据已经完整的复制给了子进程。而唯一能够区分父子进程的方法就是判断fork的返回值。如果为0，表示是子进程，如果为正数，表示为父进程，且该正数为子进程的PID（进程号），而如果是-1，表示子进程创建失败</p>
-<p>提个伪需求:顺序向一个文件输出2000000个数字0-1999999, 每个数字一行</p>
-<p>常规思路:</p>
-<figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="meta">&lt;?php</span></div><div class="line">    $max = <span class="number">2000000</span></div><div class="line">    $logFile = <span class="string">'/tmp/pcntl.log'</span>;</div><div class="line">    <span class="keyword">for</span> ($i = <span class="number">0</span>; $i &lt; $max; $i++) &#123; <span class="comment">//循环向文件写入数字</span></div><div class="line">       file_put_contents($logFile, $i . PHP_EOL, FILE_APPEND);</div><div class="line">    &#125;</div></pre></td></tr></table></figure>
-<p>多进程（pcntl扩展）:<br><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div></pre></td><td class="code"><pre><div class="line"><span class="meta">&lt;?php</span></div><div class="line">    $max = <span class="number">2000000</span>;</div><div class="line">    $workers = <span class="number">10</span>;</div><div class="line">    $logFile = <span class="string">'/tmp/pcntl.log'</span>;</div><div class="line">    pcntl_signal(SIGCHLD, SIG_IGN);</div><div class="line">    </div><div class="line">    <span class="keyword">for</span> ($i = <span class="number">0</span>; $i &lt; $workers; $i++) &#123;</div><div class="line">    </div><div class="line">        $pid = pcntl_fork();    <span class="comment">//创建子进程</span></div><div class="line">    </div><div class="line">        <span class="keyword">if</span> ($pid == <span class="number">-1</span>) &#123;</div><div class="line">            <span class="keyword">die</span>(<span class="string">'could not fork'</span>);  <span class="comment">//错误处理：创建子进程失败时返回-1</span></div><div class="line">        &#125;</div><div class="line">    </div><div class="line">        <span class="keyword">if</span> ($pid) &#123;</div><div class="line">            <span class="comment">//父进程会得到子进程号，所以这里是父进程执行的逻辑</span></div><div class="line">            <span class="comment">//如果不需要阻塞进程，而又想得到子进程的退出状态，则可以注释掉pcntl_wait($status)语句</span></div><div class="line">            pcntl_wait($status, WNOHANG); <span class="comment">//等待子进程中断，防止子进程成为僵尸进程。</span></div><div class="line">        &#125; <span class="keyword">else</span> &#123;</div><div class="line">            <span class="comment">//子进程得到的$pid为0, 所以这里是子进程执行的逻辑   执行处理逻辑</span></div><div class="line">            $lastId = $i === <span class="number">0</span> ? <span class="number">0</span> : $max / $workers * $i;</div><div class="line">            $maxId = $max / $workers * ($i + <span class="number">1</span>) - <span class="number">1</span>;</div><div class="line">    </div><div class="line">            <span class="keyword">for</span> ($j = $lastId; $j &lt;= $maxId; $j++) &#123;</div><div class="line">                file_put_contents($logFile, $j . PHP_EOL, FILE_APPEND);</div><div class="line">            &#125;</div><div class="line">            <span class="keyword">exit</span>;</div><div class="line">        &#125;</div><div class="line">    &#125;</div></pre></td></tr></table></figure></p>
-<p>time php pcntl.php<br>执行时间:<br>1、常规思路: php pcntl.php  2.24s user 4.56s system 97% cpu 6.981 total<br>2、多进程: php pcntl.php  0.02s user 0.00s system 23% cpu 0.086 total</p>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -1643,7 +1636,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">17</span>
+              <span class="site-state-item-count">18</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
