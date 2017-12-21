@@ -253,7 +253,7 @@
             
               
                 
-                <a class="post-title-link" href="/2017/12/20/mysql-stock-over/" itemprop="url">
+                <a class="post-title-link" href="/2017/12/21/mysql-stock-over/" itemprop="url">
                   mysql防止库存超卖
                 </a>
               
@@ -267,8 +267,8 @@
               <i class="fa fa-calendar-o"></i>
             </span>
             <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2017-12-20T16:21:05+08:00" content="2017-12-20">
-              2017-12-20
+            <time itemprop="dateCreated" datetime="2017-12-21T11:10:43+08:00" content="2017-12-21">
+              2017-12-21
             </time>
           </span>
 
@@ -321,11 +321,11 @@
 <ol>
 <li>减库存SQL</li>
 </ol>
-<p>下单必须有足够的库存, 所以库存必须大于需要购买的库存数量<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">UPDATE</span> goods <span class="keyword">SET</span> stock = stock - <span class="number">2</span> <span class="keyword">WHERE</span> goods_id = <span class="number">100</span> <span class="keyword">AND</span> stock &gt; <span class="number">2</span>;</div></pre></td></tr></table></figure></p>
+<p>下单必须有足够的库存, 所以库存必须大于需要购买的库存数量<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">UPDATE</span> goods <span class="keyword">SET</span> stock = stock - <span class="number">2</span> <span class="keyword">WHERE</span> goods_id = <span class="number">100</span> <span class="keyword">AND</span> stock &gt;= <span class="number">2</span>;</div></pre></td></tr></table></figure></p>
 <ol>
 <li>下单量大怎么处理</li>
 </ol>
-<p>下单量大的话,会有大量的写请求打到Mysql服务器,造成数据库服务器压力甚至导致数据库宕机,所以我们利用Redis decrby命令来减少大量到达Mysql的请求<br><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">$buyNum = <span class="number">2</span>;</div><div class="line">$remainNum = \Model\Redis\BaseModel::getInstance(<span class="keyword">self</span>::$redisConfig)-&gt;redis-&gt;decrBy(<span class="string">'goods:1:stock'</span>, $buyNum);</div><div class="line"><span class="keyword">if</span> ($remainNum &lt; <span class="number">0</span>) &#123;</div><div class="line">    <span class="comment">#库存不足、下单失败</span></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>下单量大的话,会有大量的写请求打到Mysql服务器,造成数据库服务器压力甚至导致数据库宕机,所以我们利用Redis decrby命令来减少大量到达Mysql的请求<br><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="comment">#商品1的库存</span></div><div class="line">$key = <span class="string">"goods:1:stock"</span>;</div><div class="line">$script = <span class="string">'</span></div><div class="line">    local remainNum = redis.call("decrby", KEYS[1], ARGV[1])</div><div class="line">    if remainNum &lt; 0 </div><div class="line">    then</div><div class="line">        redis.call("incrby", KEYS[1], ARGV[1])</div><div class="line">        return 0</div><div class="line">    else</div><div class="line">        return 1</div><div class="line">    end';</div><div class="line"><span class="comment">#随机购买1到5个,压测</span></div><div class="line">$buyNumber = mt_rand(<span class="number">1</span>, <span class="number">5</span>);</div><div class="line">$re = <span class="keyword">$this</span>-&gt;redis-&gt;eval($script, [$key, $buyNumber], <span class="number">1</span>);</div><div class="line"><span class="comment">#记录日志</span></div><div class="line">error_log(sprintf(<span class="string">"购买数:%s, 购买结果:%s\n"</span>, $buyNumber, $re ? <span class="string">'成功'</span> : <span class="string">'失败'</span>), <span class="number">3</span>, <span class="string">'/tmp/buy_result.log'</span>);</div></pre></td></tr></table></figure></p>
 <ol>
 <li>下单量还是大怎么处理</li>
 </ol>
