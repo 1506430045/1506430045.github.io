@@ -1,0 +1,652 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="PHP,Redis,Lua," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.0.1" />
+
+
+
+
+
+
+<meta name="description" content="电商系统经常会有各种活动,如团购、秒杀、特价。活动商品库存有限,面对段时间成千上万的用户抢购,怎么保证商品不会超卖?
+例子商品ID:100总库存:20个请求人:a(购买5个)、b（购买10个）、c（购买6个）分析:由于5+10+6=21大于总库存,所以必定第三人不能购买成功,否则库存超卖
+减库存SQL下单必须有足够的库存, 所以库存必须大于需要购买的库存数量1UPDATE goods SET st">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Mysql防止库存超卖">
+<meta property="og:url" content="https://1506430045.github.io/2017/12/23/mysql-stock-over/index.html">
+<meta property="og:site_name" content="xxq's blog">
+<meta property="og:description" content="电商系统经常会有各种活动,如团购、秒杀、特价。活动商品库存有限,面对段时间成千上万的用户抢购,怎么保证商品不会超卖?
+例子商品ID:100总库存:20个请求人:a(购买5个)、b（购买10个）、c（购买6个）分析:由于5+10+6=21大于总库存,所以必定第三人不能购买成功,否则库存超卖
+减库存SQL下单必须有足够的库存, 所以库存必须大于需要购买的库存数量1UPDATE goods SET st">
+<meta property="og:updated_time" content="2017-12-23T07:21:06.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Mysql防止库存超卖">
+<meta name="twitter:description" content="电商系统经常会有各种活动,如团购、秒杀、特价。活动商品库存有限,面对段时间成千上万的用户抢购,怎么保证商品不会超卖?
+例子商品ID:100总库存:20个请求人:a(购买5个)、b（购买10个）、c（购买6个）分析:由于5+10+6=21大于总库存,所以必定第三人不能购买成功,否则库存超卖
+减库存SQL下单必须有足够的库存, 所以库存必须大于需要购买的库存数量1UPDATE goods SET st">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Pisces',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 0,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> Mysql防止库存超卖 | xxq's blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">xxq's blog</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">go phper</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Mysql防止库存超卖
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2017-12-23T15:21:06+08:00" content="2017-12-23">
+              2017-12-23
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/PHP/" itemprop="url" rel="index">
+                    <span itemprop="name">PHP</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>电商系统经常会有各种活动,如团购、秒杀、特价。活动商品库存有限,面对段时间成千上万的用户抢购,怎么保证商品不会超卖?</p>
+<h4 id="例子"><a href="#例子" class="headerlink" title="例子"></a>例子</h4><p>商品ID:100<br>总库存:20个<br>请求人:a(购买5个)、b（购买10个）、c（购买6个）<br>分析:由于5+10+6=21大于总库存,所以必定第三人不能购买成功,否则库存超卖</p>
+<h4 id="减库存SQL"><a href="#减库存SQL" class="headerlink" title="减库存SQL"></a>减库存SQL</h4><p>下单必须有足够的库存, 所以库存必须大于需要购买的库存数量<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">UPDATE</span> goods <span class="keyword">SET</span> stock = stock - <span class="number">2</span> <span class="keyword">WHERE</span> goods_id = <span class="number">100</span> <span class="keyword">AND</span> stock &gt;= <span class="number">2</span>;</div></pre></td></tr></table></figure></p>
+<h4 id="下单量大怎么处理"><a href="#下单量大怎么处理" class="headerlink" title="下单量大怎么处理"></a>下单量大怎么处理</h4><p>下单量大的话,会有大量的写请求打到Mysql服务器,造成数据库服务器压力甚至导致数据库宕机,所以我们利用Redis decrby命令来减少大量到达Mysql的请求<br><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="comment">#商品1的库存</span></div><div class="line">$key = <span class="string">"goods:1:stock"</span>;</div><div class="line">$script = <span class="string">'</span></div><div class="line">    local remainNum = redis.call("decrby", KEYS[1], ARGV[1])</div><div class="line">    if remainNum &lt; 0 </div><div class="line">    then</div><div class="line">        redis.call("incrby", KEYS[1], ARGV[1])</div><div class="line">        return 0</div><div class="line">    else</div><div class="line">        return 1</div><div class="line">    end';</div><div class="line"><span class="comment">#随机购买1到5个,压测</span></div><div class="line">$buyNumber = mt_rand(<span class="number">1</span>, <span class="number">5</span>);</div><div class="line">$re = <span class="keyword">$this</span>-&gt;redis-&gt;eval($script, [$key, $buyNumber], <span class="number">1</span>);</div><div class="line"><span class="comment">#记录日志</span></div><div class="line">error_log(sprintf(<span class="string">"购买数:%s, 购买结果:%s\n"</span>, $buyNumber, $re ? <span class="string">'成功'</span> : <span class="string">'失败'</span>), <span class="number">3</span>, <span class="string">'/tmp/buy_result.log'</span>);</div></pre></td></tr></table></figure></p>
+<h4 id="Redis脚本压测"><a href="#Redis脚本压测" class="headerlink" title="Redis脚本压测"></a>Redis脚本压测</h4><p>压测预期:100个库存被购买完毕,且最终库存数为0,不会为负数</p>
+<h5 id="压测命令"><a href="#压测命令" class="headerlink" title="压测命令"></a>压测命令</h5><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">siege -c <span class="number">50</span> -r <span class="number">10</span> http:<span class="comment">//test.haha.com/</span></div></pre></td></tr></table></figure>
+<h5 id="压测结果"><a href="#压测结果" class="headerlink" title="压测结果"></a>压测结果</h5><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">Transactions:		         <span class="number">500</span> hits</div><div class="line">Availability:		         <span class="number">100.00</span> %</div><div class="line">Elapsed time:		         <span class="number">3.58</span> secs</div><div class="line">Data transferred:	         <span class="number">0.00</span> MB</div><div class="line">Response time:		         <span class="number">0.02</span> secs</div><div class="line">Transaction rate:	         <span class="number">139.66</span> trans/sec</div><div class="line">Throughput:		             <span class="number">0.00</span> MB/sec</div><div class="line">Concurrency:		         <span class="number">2.46</span></div><div class="line">Successful transactions:     <span class="number">500</span></div><div class="line">Failed transactions:	     <span class="number">0</span></div><div class="line">Longest transaction:	     <span class="number">0.10</span></div><div class="line">Shortest transaction:	     <span class="number">0.00</span></div></pre></td></tr></table></figure>
+<h5 id="压测日志"><a href="#压测日志" class="headerlink" title="压测日志"></a>压测日志</h5><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div><div class="line">103</div><div class="line">104</div><div class="line">105</div><div class="line">106</div><div class="line">107</div><div class="line">108</div><div class="line">109</div><div class="line">110</div><div class="line">111</div><div class="line">112</div><div class="line">113</div><div class="line">114</div><div class="line">115</div><div class="line">116</div><div class="line">117</div><div class="line">118</div><div class="line">119</div><div class="line">120</div><div class="line">121</div><div class="line">122</div><div class="line">123</div><div class="line">124</div><div class="line">125</div><div class="line">126</div><div class="line">127</div><div class="line">128</div><div class="line">129</div><div class="line">130</div><div class="line">131</div><div class="line">132</div><div class="line">133</div><div class="line">134</div><div class="line">135</div><div class="line">136</div><div class="line">137</div><div class="line">138</div><div class="line">139</div><div class="line">140</div><div class="line">141</div><div class="line">142</div><div class="line">143</div><div class="line">144</div><div class="line">145</div><div class="line">146</div><div class="line">147</div><div class="line">148</div><div class="line">149</div><div class="line">150</div><div class="line">151</div><div class="line">152</div><div class="line">153</div><div class="line">154</div><div class="line">155</div><div class="line">156</div><div class="line">157</div><div class="line">158</div><div class="line">159</div><div class="line">160</div><div class="line">161</div><div class="line">162</div><div class="line">163</div><div class="line">164</div><div class="line">165</div><div class="line">166</div><div class="line">167</div><div class="line">168</div><div class="line">169</div><div class="line">170</div><div class="line">171</div><div class="line">172</div><div class="line">173</div><div class="line">174</div><div class="line">175</div><div class="line">176</div><div class="line">177</div><div class="line">178</div><div class="line">179</div><div class="line">180</div><div class="line">181</div><div class="line">182</div><div class="line">183</div><div class="line">184</div><div class="line">185</div><div class="line">186</div><div class="line">187</div><div class="line">188</div><div class="line">189</div><div class="line">190</div><div class="line">191</div><div class="line">192</div><div class="line">193</div><div class="line">194</div><div class="line">195</div><div class="line">196</div><div class="line">197</div><div class="line">198</div><div class="line">199</div><div class="line">200</div><div class="line">201</div><div class="line">202</div><div class="line">203</div><div class="line">204</div><div class="line">205</div><div class="line">206</div><div class="line">207</div><div class="line">208</div><div class="line">209</div><div class="line">210</div><div class="line">211</div><div class="line">212</div><div class="line">213</div><div class="line">214</div><div class="line">215</div><div class="line">216</div><div class="line">217</div><div class="line">218</div><div class="line">219</div><div class="line">220</div><div class="line">221</div><div class="line">222</div><div class="line">223</div><div class="line">224</div><div class="line">225</div><div class="line">226</div><div class="line">227</div><div class="line">228</div><div class="line">229</div><div class="line">230</div><div class="line">231</div><div class="line">232</div><div class="line">233</div><div class="line">234</div><div class="line">235</div><div class="line">236</div><div class="line">237</div><div class="line">238</div><div class="line">239</div><div class="line">240</div><div class="line">241</div><div class="line">242</div><div class="line">243</div><div class="line">244</div><div class="line">245</div><div class="line">246</div><div class="line">247</div><div class="line">248</div><div class="line">249</div><div class="line">250</div><div class="line">251</div><div class="line">252</div><div class="line">253</div><div class="line">254</div><div class="line">255</div><div class="line">256</div><div class="line">257</div><div class="line">258</div><div class="line">259</div><div class="line">260</div><div class="line">261</div><div class="line">262</div><div class="line">263</div><div class="line">264</div><div class="line">265</div><div class="line">266</div><div class="line">267</div><div class="line">268</div><div class="line">269</div><div class="line">270</div><div class="line">271</div><div class="line">272</div><div class="line">273</div><div class="line">274</div><div class="line">275</div><div class="line">276</div><div class="line">277</div><div class="line">278</div><div class="line">279</div><div class="line">280</div><div class="line">281</div><div class="line">282</div><div class="line">283</div><div class="line">284</div><div class="line">285</div><div class="line">286</div><div class="line">287</div><div class="line">288</div><div class="line">289</div><div class="line">290</div><div class="line">291</div><div class="line">292</div><div class="line">293</div><div class="line">294</div><div class="line">295</div><div class="line">296</div><div class="line">297</div><div class="line">298</div><div class="line">299</div><div class="line">300</div><div class="line">301</div><div class="line">302</div><div class="line">303</div><div class="line">304</div><div class="line">305</div><div class="line">306</div><div class="line">307</div><div class="line">308</div><div class="line">309</div><div class="line">310</div><div class="line">311</div><div class="line">312</div><div class="line">313</div><div class="line">314</div><div class="line">315</div><div class="line">316</div><div class="line">317</div><div class="line">318</div><div class="line">319</div><div class="line">320</div><div class="line">321</div><div class="line">322</div><div class="line">323</div><div class="line">324</div><div class="line">325</div><div class="line">326</div><div class="line">327</div><div class="line">328</div><div class="line">329</div><div class="line">330</div><div class="line">331</div><div class="line">332</div><div class="line">333</div><div class="line">334</div><div class="line">335</div><div class="line">336</div><div class="line">337</div><div class="line">338</div><div class="line">339</div><div class="line">340</div><div class="line">341</div><div class="line">342</div><div class="line">343</div><div class="line">344</div><div class="line">345</div><div class="line">346</div><div class="line">347</div><div class="line">348</div><div class="line">349</div><div class="line">350</div><div class="line">351</div><div class="line">352</div><div class="line">353</div><div class="line">354</div><div class="line">355</div><div class="line">356</div><div class="line">357</div><div class="line">358</div><div class="line">359</div><div class="line">360</div><div class="line">361</div><div class="line">362</div><div class="line">363</div><div class="line">364</div><div class="line">365</div><div class="line">366</div><div class="line">367</div><div class="line">368</div><div class="line">369</div><div class="line">370</div><div class="line">371</div><div class="line">372</div><div class="line">373</div><div class="line">374</div><div class="line">375</div><div class="line">376</div><div class="line">377</div><div class="line">378</div><div class="line">379</div><div class="line">380</div><div class="line">381</div><div class="line">382</div><div class="line">383</div><div class="line">384</div><div class="line">385</div><div class="line">386</div><div class="line">387</div><div class="line">388</div><div class="line">389</div><div class="line">390</div><div class="line">391</div><div class="line">392</div><div class="line">393</div><div class="line">394</div><div class="line">395</div><div class="line">396</div><div class="line">397</div><div class="line">398</div><div class="line">399</div><div class="line">400</div><div class="line">401</div><div class="line">402</div><div class="line">403</div><div class="line">404</div><div class="line">405</div><div class="line">406</div><div class="line">407</div><div class="line">408</div><div class="line">409</div><div class="line">410</div><div class="line">411</div><div class="line">412</div><div class="line">413</div><div class="line">414</div><div class="line">415</div><div class="line">416</div><div class="line">417</div><div class="line">418</div><div class="line">419</div><div class="line">420</div><div class="line">421</div><div class="line">422</div><div class="line">423</div><div class="line">424</div><div class="line">425</div><div class="line">426</div><div class="line">427</div><div class="line">428</div><div class="line">429</div><div class="line">430</div><div class="line">431</div><div class="line">432</div><div class="line">433</div><div class="line">434</div><div class="line">435</div><div class="line">436</div><div class="line">437</div><div class="line">438</div><div class="line">439</div><div class="line">440</div><div class="line">441</div><div class="line">442</div><div class="line">443</div><div class="line">444</div><div class="line">445</div><div class="line">446</div><div class="line">447</div><div class="line">448</div><div class="line">449</div><div class="line">450</div><div class="line">451</div><div class="line">452</div><div class="line">453</div><div class="line">454</div><div class="line">455</div><div class="line">456</div><div class="line">457</div><div class="line">458</div><div class="line">459</div><div class="line">460</div><div class="line">461</div><div class="line">462</div><div class="line">463</div><div class="line">464</div><div class="line">465</div><div class="line">466</div><div class="line">467</div><div class="line">468</div><div class="line">469</div><div class="line">470</div><div class="line">471</div><div class="line">472</div><div class="line">473</div><div class="line">474</div><div class="line">475</div><div class="line">476</div><div class="line">477</div><div class="line">478</div><div class="line">479</div><div class="line">480</div><div class="line">481</div><div class="line">482</div><div class="line">483</div><div class="line">484</div><div class="line">485</div><div class="line">486</div><div class="line">487</div><div class="line">488</div><div class="line">489</div><div class="line">490</div><div class="line">491</div><div class="line">492</div><div class="line">493</div><div class="line">494</div><div class="line">495</div><div class="line">496</div><div class="line">497</div><div class="line">498</div><div class="line">499</div><div class="line">500</div></pre></td><td class="code"><pre><div class="line">购买数:<span class="number">3</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">5</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">2</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">1</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">3</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">3</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">4</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">2</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">2</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">1</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">5</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">1</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">5</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">5</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">3</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">1</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">2</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">2</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">2</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">3</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">5</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">4</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">2</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">1</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">2</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">1</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">3</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">4</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">1</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">4</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">1</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">4</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">3</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">1</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">2</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">3</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">3</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:成功</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">3</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">2</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">5</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">1</span>, 购买结果:失败</div><div class="line">购买数:<span class="number">4</span>, 购买结果:失败</div></pre></td></tr></table></figure>
+<h5 id="最终库存"><a href="#最终库存" class="headerlink" title="最终库存"></a>最终库存</h5><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">6379</span>&gt; get goods:<span class="number">1</span>:stock</div><div class="line"><span class="string">"0"</span></div></pre></td></tr></table></figure>
+<p>符合预期</p>
+<h4 id="下单量还是大怎么处理"><a href="#下单量还是大怎么处理" class="headerlink" title="下单量还是大怎么处理"></a>下单量还是大怎么处理</h4><h5 id="限流（Openresty-令牌桶、漏桶、计数器）"><a href="#限流（Openresty-令牌桶、漏桶、计数器）" class="headerlink" title="限流（Openresty 令牌桶、漏桶、计数器）"></a>限流（Openresty 令牌桶、漏桶、计数器）</h5><h5 id="队列削峰（Rabbit、Kafka）"><a href="#队列削峰（Rabbit、Kafka）" class="headerlink" title="队列削峰（Rabbit、Kafka）"></a>队列削峰（Rabbit、Kafka）</h5><h5 id="异步处理（下单返订单号-处理完成异步通知）"><a href="#异步处理（下单返订单号-处理完成异步通知）" class="headerlink" title="异步处理（下单返订单号,处理完成异步通知）"></a>异步处理（下单返订单号,处理完成异步通知）</h5><h5 id="内存缓存"><a href="#内存缓存" class="headerlink" title="内存缓存"></a>内存缓存</h5><h5 id="秒杀开始前和库存为0后直接返回生成好的静态html页面"><a href="#秒杀开始前和库存为0后直接返回生成好的静态html页面" class="headerlink" title="秒杀开始前和库存为0后直接返回生成好的静态html页面"></a>秒杀开始前和库存为0后直接返回生成好的静态html页面</h5><h5 id="负载均衡（加机器）"><a href="#负载均衡（加机器）" class="headerlink" title="负载均衡（加机器）"></a>负载均衡（加机器）</h5><h5 id="Mysql连接池"><a href="#Mysql连接池" class="headerlink" title="Mysql连接池"></a>Mysql连接池</h5>
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/PHP/" rel="tag">#PHP</a>
+          
+            <a href="/tags/Redis/" rel="tag">#Redis</a>
+          
+            <a href="/tags/Lua/" rel="tag">#Lua</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/12/21/可变参数/" rel="next" title="PHP可变参数">
+                <i class="fa fa-chevron-left"></i> PHP可变参数
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/12/23/mysql-transaction/" rel="prev" title="MySQL事务隔离级别">
+                MySQL事务隔离级别 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="cloud-tie-wrapper" class="cloud-tie-wrapper"></div>
+      <script>
+        var cloudTieConfig = {
+          url: document.location.href,
+          sourceId: "",
+          productKey: "715b044bb3c749ae9adbd8c1d4f162b8",
+          target: "cloud-tie-wrapper"
+        };
+      </script>
+      <script src="https://img1.cache.netease.com/f2e/tie/yun/sdk/loader.js"></script>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="https://avatars1.githubusercontent.com/u/7411585?v=3&s=466"
+               alt="xxq" />
+          <p class="site-author-name" itemprop="name">xxq</p>
+          <p class="site-description motion-element" itemprop="description">记录平时学习</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">19</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">10</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/1506430045" target="_blank" title="github">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  github
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="http://weibo.com/u/3224218964" target="_blank" title="weibo">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  weibo
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#例子"><span class="nav-number">1.</span> <span class="nav-text">例子</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#减库存SQL"><span class="nav-number">2.</span> <span class="nav-text">减库存SQL</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#下单量大怎么处理"><span class="nav-number">3.</span> <span class="nav-text">下单量大怎么处理</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Redis脚本压测"><span class="nav-number">4.</span> <span class="nav-text">Redis脚本压测</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#压测命令"><span class="nav-number">4.1.</span> <span class="nav-text">压测命令</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#压测结果"><span class="nav-number">4.2.</span> <span class="nav-text">压测结果</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#压测日志"><span class="nav-number">4.3.</span> <span class="nav-text">压测日志</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#最终库存"><span class="nav-number">4.4.</span> <span class="nav-text">最终库存</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#下单量还是大怎么处理"><span class="nav-number">5.</span> <span class="nav-text">下单量还是大怎么处理</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#限流（Openresty-令牌桶、漏桶、计数器）"><span class="nav-number">5.1.</span> <span class="nav-text">限流（Openresty 令牌桶、漏桶、计数器）</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#队列削峰（Rabbit、Kafka）"><span class="nav-number">5.2.</span> <span class="nav-text">队列削峰（Rabbit、Kafka）</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#异步处理（下单返订单号-处理完成异步通知）"><span class="nav-number">5.3.</span> <span class="nav-text">异步处理（下单返订单号,处理完成异步通知）</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#内存缓存"><span class="nav-number">5.4.</span> <span class="nav-text">内存缓存</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#秒杀开始前和库存为0后直接返回生成好的静态html页面"><span class="nav-number">5.5.</span> <span class="nav-text">秒杀开始前和库存为0后直接返回生成好的静态html页面</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#负载均衡（加机器）"><span class="nav-number">5.6.</span> <span class="nav-text">负载均衡（加机器）</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Mysql连接池"><span class="nav-number">5.7.</span> <span class="nav-text">Mysql连接池</span></a></li></ol></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">xxq</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.0.1"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.0.1"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.0.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.0.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.0.1"></script>
+
+
+
+  
+
+  
+
+
+
+  
+  
+  
+
+  
+
+  
+
+</body>
+</html>

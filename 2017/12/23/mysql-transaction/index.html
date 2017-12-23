@@ -1,0 +1,703 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Mysql," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.0.1" />
+
+
+
+
+
+
+<meta name="description" content="一、事务的基本要素（ACID）
+原子性（Atomicity）：事务开始后所有操作，要么全部做完，要么全部不做，不可能停滞在中间环节。事务执行过程中出错，会回滚到事务开始前的状态，所有的操作就像没有发生一样。也就是说事务是一个不可分割的整体，就像化学中学过的原子，是物质构成的基本单位。
+一致性（Consistency）：事务开始前和结束后，数据库的完整性约束没有被破坏 。比如A向B转账，不可能A扣了">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MySQL事务隔离级别">
+<meta property="og:url" content="https://1506430045.github.io/2017/12/23/mysql-transaction/index.html">
+<meta property="og:site_name" content="xxq's blog">
+<meta property="og:description" content="一、事务的基本要素（ACID）
+原子性（Atomicity）：事务开始后所有操作，要么全部做完，要么全部不做，不可能停滞在中间环节。事务执行过程中出错，会回滚到事务开始前的状态，所有的操作就像没有发生一样。也就是说事务是一个不可分割的整体，就像化学中学过的原子，是物质构成的基本单位。
+一致性（Consistency）：事务开始前和结束后，数据库的完整性约束没有被破坏 。比如A向B转账，不可能A扣了">
+<meta property="og:updated_time" content="2017-12-23T09:01:46.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="MySQL事务隔离级别">
+<meta name="twitter:description" content="一、事务的基本要素（ACID）
+原子性（Atomicity）：事务开始后所有操作，要么全部做完，要么全部不做，不可能停滞在中间环节。事务执行过程中出错，会回滚到事务开始前的状态，所有的操作就像没有发生一样。也就是说事务是一个不可分割的整体，就像化学中学过的原子，是物质构成的基本单位。
+一致性（Consistency）：事务开始前和结束后，数据库的完整性约束没有被破坏 。比如A向B转账，不可能A扣了">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Pisces',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 0,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> MySQL事务隔离级别 | xxq's blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">xxq's blog</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">go phper</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                MySQL事务隔离级别
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2017-12-23T17:01:46+08:00" content="2017-12-23">
+              2017-12-23
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/MySQL/" itemprop="url" rel="index">
+                    <span itemprop="name">MySQL</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="一、事务的基本要素（ACID）"><a href="#一、事务的基本要素（ACID）" class="headerlink" title="一、事务的基本要素（ACID）"></a><em>一、事务的基本要素（ACID）</em></h3><ol>
+<li>原子性（Atomicity）：事务开始后所有操作，要么全部做完，要么全部不做，不可能停滞在中间环节。事务执行过程中出错，会回滚到事务开始前的状态，所有的操作就像没有发生一样。也就是说事务是一个不可分割的整体，就像化学中学过的原子，是物质构成的基本单位。</li>
+<li>一致性（Consistency）：事务开始前和结束后，数据库的完整性约束没有被破坏 。比如A向B转账，不可能A扣了钱，B却没收到。</li>
+<li>隔离性（Isolation）：同一时间，只允许一个事务请求同一数据，不同的事务之间彼此没有任何干扰。比如A正在从一张银行卡中取钱，在A取钱的过程结束前，B不能向这张卡转账。</li>
+<li>持久性（Durability）：事务完成后，事务对数据库的所有更新将被保存到数据库，不能回滚。</li>
+<li>小结：原子性是事务隔离的基础，隔离性和持久性是手段，最终目的是为了保持数据的一致性。 </li>
+</ol>
+<h3 id="二、事务的并发问题"><a href="#二、事务的并发问题" class="headerlink" title="二、事务的并发问题"></a><em>二、事务的并发问题</em></h3><ol>
+<li>脏读：事务A读取了事务B更新的数据，然后B回滚操作，那么A读取到的数据是脏数据</li>
+<li>不可重复读：事务 A 多次读取同一数据，事务 B 在事务A多次读取的过程中，对数据作了更新并提交，导致事务A多次读取同一数据时，结果 不一致。</li>
+<li>幻读：系统管理员A将数据库中所有学生的成绩从具体分数改为ABCDE等级，但是系统管理员B就在这个时候插入了一条具体分数的记录，当系统管理员A改结束后发现还有一条记录没有改过来，就好像发生了幻觉一样，这就叫幻读。</li>
+<li>小结：不可重复读的和幻读很容易混淆，不可重复读侧重于修改，幻读侧重于新增或删除。解决不可重复读的问题只需锁住满足条件的行，解决幻读需要锁表</li>
+</ol>
+<h3 id="三、MySQL事务隔离级别"><a href="#三、MySQL事务隔离级别" class="headerlink" title="三、MySQL事务隔离级别"></a><em>三、MySQL事务隔离级别</em></h3><table>
+<thead>
+<tr>
+<th>事务隔离级别</th>
+<th style="text-align:center">脏读</th>
+<th style="text-align:center">不可重复读</th>
+<th style="text-align:center">幻读</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>读未提交（read-uncommitted）</td>
+<td style="text-align:center">是</td>
+<td style="text-align:center">是</td>
+<td style="text-align:center">是</td>
+</tr>
+<tr>
+<td>不可重复读（read-committed）</td>
+<td style="text-align:center">否</td>
+<td style="text-align:center">是</td>
+<td style="text-align:center">是</td>
+</tr>
+<tr>
+<td>可重复读（repeatable-read）</td>
+<td style="text-align:center">否</td>
+<td style="text-align:center">否</td>
+<td style="text-align:center">是</td>
+</tr>
+<tr>
+<td>串行化（serializable）</td>
+<td style="text-align:center">否</td>
+<td style="text-align:center">否</td>
+<td style="text-align:center">否</td>
+</tr>
+</tbody>
+</table>
+<p>MySQL默认的事务隔离级别为可重复读<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">mysql&gt; SELECT @@tx_isolation;</div><div class="line">+-----------------+</div><div class="line">| @@tx_isolation  |</div><div class="line">+-----------------+</div><div class="line">| REPEATABLE-READ |</div><div class="line">+-----------------+</div></pre></td></tr></table></figure></p>
+<h3 id="四、用例子说明各个隔离级别的情况"><a href="#四、用例子说明各个隔离级别的情况" class="headerlink" title="四、用例子说明各个隔离级别的情况"></a><em>四、用例子说明各个隔离级别的情况</em></h3><h4 id="未提交读-read-uncommitted"><a href="#未提交读-read-uncommitted" class="headerlink" title="未提交读(read-uncommitted)"></a>未提交读(read-uncommitted)</h4><h5 id="打开一个客户端A，并设置当前事务模式为read-uncommitted（未提交读），查询表account的初始值："><a href="#打开一个客户端A，并设置当前事务模式为read-uncommitted（未提交读），查询表account的初始值：" class="headerlink" title="打开一个客户端A，并设置当前事务模式为read uncommitted（未提交读），查询表account的初始值："></a>打开一个<font color="red">客户端A</font>，并设置当前事务模式为read uncommitted（未提交读），查询表account的初始值：</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line">mysql&gt; SET session TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; select @@tx_isolation;</div><div class="line">+------------------+</div><div class="line">| @@tx_isolation   |</div><div class="line">+------------------+</div><div class="line">| READ-UNCOMMITTED |</div><div class="line">+------------------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; START TRANSACTION;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; select * from account;</div><div class="line">+----+-----------+---------+</div><div class="line">| id | name      | balance |</div><div class="line">+----+-----------+---------+</div><div class="line">|  1 | lilei     |     450 |</div><div class="line">|  2 | hanmeimei |     850 |</div><div class="line">|  3 | tom       |    1850 |</div><div class="line">+----+-----------+---------+</div><div class="line">3 rows in set (0.00 sec)</div></pre></td></tr></table></figure>
+<h5 id="在客户端A的事务提交之前，打开另一个客户端B，更新表account："><a href="#在客户端A的事务提交之前，打开另一个客户端B，更新表account：" class="headerlink" title="在客户端A的事务提交之前，打开另一个客户端B，更新表account："></a>在客户端A的事务提交之前，打开另一个<font color="red">客户端B</font>，更新表account：</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">mysql&gt; SET session TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; START TRANSACTION;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; update account set balance = balance - 50 where id = 1;</div><div class="line">Query OK, 1 row affected (0.01 sec)</div><div class="line">Rows matched: 1  Changed: 1  Warnings: 0</div><div class="line"></div><div class="line">mysql&gt; select * from account;</div><div class="line">+----+-----------+---------+</div><div class="line">| id | name      | balance |</div><div class="line">+----+-----------+---------+</div><div class="line">|  1 | lilei     |     400 |</div><div class="line">|  2 | hanmeimei |     850 |</div><div class="line">|  3 | tom       |    1850 |</div><div class="line">+----+-----------+---------+</div><div class="line">3 rows in set (0.00 sec)</div></pre></td></tr></table></figure>
+<h5 id="这时，虽然客户端B的事务还没提交，但是客户端A就可以查询到B已经更新的数据："><a href="#这时，虽然客户端B的事务还没提交，但是客户端A就可以查询到B已经更新的数据：" class="headerlink" title="这时，虽然客户端B的事务还没提交，但是客户端A就可以查询到B已经更新的数据："></a>这时，虽然客户端B的事务还没提交，但是<font color="red">客户端A</font>就可以查询到B已经更新的数据：</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">mysql&gt; select * from account;</div><div class="line">+----+-----------+---------+</div><div class="line">| id | name      | balance |</div><div class="line">+----+-----------+---------+</div><div class="line">|  1 | lilei     |     400 |</div><div class="line">|  2 | hanmeimei |     850 |</div><div class="line">|  3 | tom       |    1850 |</div><div class="line">+----+-----------+---------+</div><div class="line">3 rows in set (0.00 sec)</div></pre></td></tr></table></figure>
+<h5 id="一旦客户端B的事务因为某种原因回滚，所有的操作都将会被撤销，那客户端A查询到的数据其实就是脏数据："><a href="#一旦客户端B的事务因为某种原因回滚，所有的操作都将会被撤销，那客户端A查询到的数据其实就是脏数据：" class="headerlink" title="一旦客户端B的事务因为某种原因回滚，所有的操作都将会被撤销，那客户端A查询到的数据其实就是脏数据："></a>一旦<font color="red">客户端B</font>的事务因为某种原因回滚，所有的操作都将会被撤销，那客户端A查询到的数据其实就是脏数据：</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">mysql&gt; rollback;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; select * from account;</div><div class="line">+----+-----------+---------+</div><div class="line">| id | name      | balance |</div><div class="line">+----+-----------+---------+</div><div class="line">|  1 | lilei     |     450 |</div><div class="line">|  2 | hanmeimei |     850 |</div><div class="line">|  3 | tom       |    1850 |</div><div class="line">+----+-----------+---------+</div><div class="line">3 rows in set (0.00 sec)</div></pre></td></tr></table></figure>
+<h5 id="在客户端A执行更新语句update-account-set-balance-balance-50-where-id-1，lilei的balance没有变成350，居然是400，是不是很奇怪，数据的一致性没问啊，如果你这么想就太天真-了，在应用程序中，我们会用400-50-350，并不知道其他会话回滚了，要想解决这个问题可以采用读已提交的隔离级别"><a href="#在客户端A执行更新语句update-account-set-balance-balance-50-where-id-1，lilei的balance没有变成350，居然是400，是不是很奇怪，数据的一致性没问啊，如果你这么想就太天真-了，在应用程序中，我们会用400-50-350，并不知道其他会话回滚了，要想解决这个问题可以采用读已提交的隔离级别" class="headerlink" title="在客户端A执行更新语句update account set balance = balance - 50 where id =1，lilei的balance没有变成350，居然是400，是不是很奇怪，数据的一致性没问啊，如果你这么想就太天真 了，在应用程序中，我们会用400-50=350，并不知道其他会话回滚了，要想解决这个问题可以采用读已提交的隔离级别"></a>在<font color="red">客户端A</font>执行更新语句update account set balance = balance - 50 where id =1，lilei的balance没有变成350，居然是400，是不是很奇怪，数据的一致性没问啊，如果你这么想就太天真 了，在应用程序中，我们会用400-50=350，并不知道其他会话回滚了，要想解决这个问题可以采用读已提交的隔离级别</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">mysql&gt; update account set balance = balance - 50 where id = 1;</div><div class="line">Query OK, 1 row affected (0.00 sec)</div><div class="line">Rows matched: 1  Changed: 1  Warnings: 0</div><div class="line"></div><div class="line">mysql&gt; select * from account;</div><div class="line">+----+-----------+---------+</div><div class="line">| id | name      | balance |</div><div class="line">+----+-----------+---------+</div><div class="line">|  1 | lilei     |     400 |</div><div class="line">|  2 | hanmeimei |     850 |</div><div class="line">|  3 | tom       |    1850 |</div><div class="line">+----+-----------+---------+</div><div class="line">3 rows in set (0.00 sec)</div></pre></td></tr></table></figure>
+<h4 id="已提交读-read-committed"><a href="#已提交读-read-committed" class="headerlink" title="已提交读(read-committed)"></a>已提交读(read-committed)</h4><h5 id="打开一个客户端A，并设置当前事务模式为read-committed（未提交读），查询表account的初始值："><a href="#打开一个客户端A，并设置当前事务模式为read-committed（未提交读），查询表account的初始值：" class="headerlink" title="打开一个客户端A，并设置当前事务模式为read committed（未提交读），查询表account的初始值："></a>打开一个<font color="red">客户端A</font>，并设置当前事务模式为read committed（未提交读），查询表account的初始值：</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">mysql&gt; SET session TRANSACTION ISOLATION LEVEL READ COMMITTED;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; START TRANSACTION;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; select * from account;</div><div class="line">+----+-----------+---------+</div><div class="line">| id | name      | balance |</div><div class="line">+----+-----------+---------+</div><div class="line">|  1 | lilei     |     450 |</div><div class="line">|  2 | hanmeimei |     850 |</div><div class="line">|  3 | tom       |    1850 |</div><div class="line">+----+-----------+---------+</div><div class="line">3 rows in set (0.00 sec)</div></pre></td></tr></table></figure>
+<h5 id="在客户端A的事务提交之前，打开另一个客户端B，更新表account：-1"><a href="#在客户端A的事务提交之前，打开另一个客户端B，更新表account：-1" class="headerlink" title="在客户端A的事务提交之前，打开另一个客户端B，更新表account："></a>在客户端A的事务提交之前，打开另一个<font color="red">客户端B</font>，更新表account：</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">mysql&gt; SET session TRANSACTION ISOLATION LEVEL READ COMMITTED;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; START TRANSACTION;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; update account set balance = balance - 50 where id = 1;</div><div class="line">Query OK, 1 row affected (0.00 sec)</div><div class="line">Rows matched: 1  Changed: 1  Warnings: 0</div><div class="line"></div><div class="line">mysql&gt; select * from account;</div><div class="line">+----+-----------+---------+</div><div class="line">| id | name      | balance |</div><div class="line">+----+-----------+---------+</div><div class="line">|  1 | lilei     |     400 |</div><div class="line">|  2 | hanmeimei |     850 |</div><div class="line">|  3 | tom       |    1850 |</div><div class="line">+----+-----------+---------+</div><div class="line">3 rows in set (0.00 sec)</div></pre></td></tr></table></figure>
+<h5 id="这时，客户端B的事务还没提交，客户端A不能查询到B已经更新的数据，解决了脏读问题："><a href="#这时，客户端B的事务还没提交，客户端A不能查询到B已经更新的数据，解决了脏读问题：" class="headerlink" title="这时，客户端B的事务还没提交，客户端A不能查询到B已经更新的数据，解决了脏读问题："></a>这时，客户端B的事务还没提交，<font color="red">客户端A</font>不能查询到B已经更新的数据，解决了脏读问题：</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">mysql&gt; select * from account;</div><div class="line">+----+-----------+---------+</div><div class="line">| id | name      | balance |</div><div class="line">+----+-----------+---------+</div><div class="line">|  1 | lilei     |     450 |</div><div class="line">|  2 | hanmeimei |     850 |</div><div class="line">|  3 | tom       |    1850 |</div><div class="line">+----+-----------+---------+</div></pre></td></tr></table></figure>
+<h5 id="客户端B的事务提交"><a href="#客户端B的事务提交" class="headerlink" title="客户端B的事务提交"></a><font color="red">客户端B</font>的事务提交</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">mysql&gt; select * from account;</div><div class="line">+----+-----------+---------+</div><div class="line">| id | name      | balance |</div><div class="line">+----+-----------+---------+</div><div class="line">|  1 | lilei     |     400 |</div><div class="line">|  2 | hanmeimei |     850 |</div><div class="line">|  3 | tom       |    1850 |</div><div class="line">+----+-----------+---------+</div><div class="line">3 rows in set (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; commit;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div></pre></td></tr></table></figure>
+<h5 id="客户端A执行与上一步相同的查询，结果-与上一步不一致，即产生了不可重复读的问题，在应用程序中，假设我们处于客户端A的会话，查询到lilei的balance为450，但是其他事务将lilei的balance值改为400，我们并不知道，如果用450这个值去做其他操作，是有问题的，不过这个概率真的很小哦，要想避免这个问题，可以采用可重复读的隔离级别"><a href="#客户端A执行与上一步相同的查询，结果-与上一步不一致，即产生了不可重复读的问题，在应用程序中，假设我们处于客户端A的会话，查询到lilei的balance为450，但是其他事务将lilei的balance值改为400，我们并不知道，如果用450这个值去做其他操作，是有问题的，不过这个概率真的很小哦，要想避免这个问题，可以采用可重复读的隔离级别" class="headerlink" title="客户端A执行与上一步相同的查询，结果 与上一步不一致，即产生了不可重复读的问题，在应用程序中，假设我们处于客户端A的会话，查询到lilei的balance为450，但是其他事务将lilei的balance值改为400，我们并不知道，如果用450这个值去做其他操作，是有问题的，不过这个概率真的很小哦，要想避免这个问题，可以采用可重复读的隔离级别"></a><font color="red">客户端A</font>执行与上一步相同的查询，结果 与上一步不一致，即产生了不可重复读的问题，在应用程序中，假设我们处于客户端A的会话，查询到lilei的balance为450，但是其他事务将lilei的balance值改为400，我们并不知道，如果用450这个值去做其他操作，是有问题的，不过这个概率真的很小哦，要想避免这个问题，可以采用可重复读的隔离级别</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">mysql&gt; select * from account;</div><div class="line">+----+-----------+---------+</div><div class="line">| id | name      | balance |</div><div class="line">+----+-----------+---------+</div><div class="line">|  1 | lilei     |     450 |</div><div class="line">|  2 | hanmeimei |     850 |</div><div class="line">|  3 | tom       |    1850 |</div><div class="line">+----+-----------+---------+</div><div class="line">3 rows in set (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; select * from account;</div><div class="line">+----+-----------+---------+</div><div class="line">| id | name      | balance |</div><div class="line">+----+-----------+---------+</div><div class="line">|  1 | lilei     |     400 |</div><div class="line">|  2 | hanmeimei |     850 |</div><div class="line">|  3 | tom       |    1850 |</div><div class="line">+----+-----------+---------+</div><div class="line">3 rows in set (0.00 sec)</div></pre></td></tr></table></figure>
+<h4 id="可重复读-repeatable-read"><a href="#可重复读-repeatable-read" class="headerlink" title="可重复读(repeatable-read)"></a>可重复读(repeatable-read)</h4><h5 id="打开一个客户端A，并设置当前事务模式为repeatable-read，查询表account的初始值："><a href="#打开一个客户端A，并设置当前事务模式为repeatable-read，查询表account的初始值：" class="headerlink" title="打开一个客户端A，并设置当前事务模式为repeatable read，查询表account的初始值："></a>打开一个<font color="red">客户端A</font>，并设置当前事务模式为repeatable read，查询表account的初始值：</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">mysql&gt; SET session TRANSACTION ISOLATION LEVEL REPEATABLE READ;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; START TRANSACTION;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; select * from account;</div><div class="line">+----+-----------+---------+</div><div class="line">| id | name      | balance |</div><div class="line">+----+-----------+---------+</div><div class="line">|  1 | lilei     |     400 |</div><div class="line">|  2 | hanmeimei |     850 |</div><div class="line">|  3 | tom       |    1850 |</div><div class="line">+----+-----------+---------+</div><div class="line">3 rows in set (0.00 sec)</div></pre></td></tr></table></figure>
+<h5 id="在客户端A的事务提交之前，打开另一个客户端B，更新表account并提交，客户端B的事务居然可以修改客户端A事务查询到的行，也就是mysql的可重复读不会锁住事务查询到的行，这一点出乎我的意料，sql标准中事务隔离级别为可重复读时，读写操作要锁行的，mysql居然没有锁，我了个去。在应用程序中要注意给行加锁，不然你会以步骤（1）中lilei的balance为400作为中间值去做其他操作"><a href="#在客户端A的事务提交之前，打开另一个客户端B，更新表account并提交，客户端B的事务居然可以修改客户端A事务查询到的行，也就是mysql的可重复读不会锁住事务查询到的行，这一点出乎我的意料，sql标准中事务隔离级别为可重复读时，读写操作要锁行的，mysql居然没有锁，我了个去。在应用程序中要注意给行加锁，不然你会以步骤（1）中lilei的balance为400作为中间值去做其他操作" class="headerlink" title="在客户端A的事务提交之前，打开另一个客户端B，更新表account并提交，客户端B的事务居然可以修改客户端A事务查询到的行，也就是mysql的可重复读不会锁住事务查询到的行，这一点出乎我的意料，sql标准中事务隔离级别为可重复读时，读写操作要锁行的，mysql居然没有锁，我了个去。在应用程序中要注意给行加锁，不然你会以步骤（1）中lilei的balance为400作为中间值去做其他操作"></a>在客户端A的事务提交之前，打开另一个<font color="red">客户端B</font>，更新表account并提交，客户端B的事务居然可以修改客户端A事务查询到的行，也就是mysql的可重复读不会锁住事务查询到的行，这一点出乎我的意料，sql标准中事务隔离级别为可重复读时，读写操作要锁行的，mysql居然没有锁，我了个去。在应用程序中要注意给行加锁，不然你会以步骤（1）中lilei的balance为400作为中间值去做其他操作</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line">mysql&gt; SET session TRANSACTION ISOLATION LEVEL REPEATABLE READ;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; update account set balance = balance - 50 where id = 1;</div><div class="line">Query OK, 1 row affected (0.00 sec)</div><div class="line">Rows matched: 1  Changed: 1  Warnings: 0</div><div class="line"></div><div class="line">mysql&gt; commit;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; select * from account;</div><div class="line">+----+-----------+---------+</div><div class="line">| id | name      | balance |</div><div class="line">+----+-----------+---------+</div><div class="line">|  1 | lilei     |     350 |</div><div class="line">|  2 | hanmeimei |     850 |</div><div class="line">|  3 | tom       |    1850 |</div><div class="line">+----+-----------+---------+</div></pre></td></tr></table></figure>
+<h5 id="在客户端A执行步骤（1）的查询："><a href="#在客户端A执行步骤（1）的查询：" class="headerlink" title="在客户端A执行步骤（1）的查询："></a>在<font color="red">客户端A</font>执行步骤（1）的查询：</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">mysql&gt; select * from account;</div><div class="line">+----+-----------+---------+</div><div class="line">| id | name      | balance |</div><div class="line">+----+-----------+---------+</div><div class="line">|  1 | lilei     |     400 |</div><div class="line">|  2 | hanmeimei |     850 |</div><div class="line">|  3 | tom       |    1850 |</div><div class="line">+----+-----------+---------+</div><div class="line">3 rows in set (0.00 sec)</div></pre></td></tr></table></figure>
+<h5 id="客户端A，lilei的balance仍然是400与步骤（1）查询结果一致，没有出现不可重复读的问题；接着执行update-balance-balance-50-where-id-1，balance没有变成400-50-350，lilei的balance值用的是步骤（2）中的350来算的，所以是300，数据的一致性倒是没有被破坏，这个有点神奇，也许是mysql的特色吧"><a href="#客户端A，lilei的balance仍然是400与步骤（1）查询结果一致，没有出现不可重复读的问题；接着执行update-balance-balance-50-where-id-1，balance没有变成400-50-350，lilei的balance值用的是步骤（2）中的350来算的，所以是300，数据的一致性倒是没有被破坏，这个有点神奇，也许是mysql的特色吧" class="headerlink" title="客户端A，lilei的balance仍然是400与步骤（1）查询结果一致，没有出现不可重复读的问题；接着执行update balance = balance - 50 where id = 1，balance没有变成400-50=350，lilei的balance值用的是步骤（2）中的350来算的，所以是300，数据的一致性倒是没有被破坏，这个有点神奇，也许是mysql的特色吧"></a><font color="red">客户端A</font>，lilei的balance仍然是400与步骤（1）查询结果一致，没有出现不可重复读的问题；接着执行update balance = balance - 50 where id = 1，balance没有变成400-50=350，lilei的balance值用的是步骤（2）中的350来算的，所以是300，数据的一致性倒是没有被破坏，这个有点神奇，也许是mysql的特色吧</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line">mysql&gt; select * from account;</div><div class="line">+----+-----------+---------+</div><div class="line">| id | name      | balance |</div><div class="line">+----+-----------+---------+</div><div class="line">|  1 | lilei     |     400 |</div><div class="line">|  2 | hanmeimei |     850 |</div><div class="line">|  3 | tom       |    1850 |</div><div class="line">+----+-----------+---------+</div><div class="line">3 rows in set (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; update account set balance = balance - 50 where id = 1;</div><div class="line">Query OK, 1 row affected (0.00 sec)</div><div class="line">Rows matched: 1  Changed: 1  Warnings: 0</div><div class="line"></div><div class="line">mysql&gt; select * from account;</div><div class="line">+----+-----------+---------+</div><div class="line">| id | name      | balance |</div><div class="line">+----+-----------+---------+</div><div class="line">|  1 | lilei     |     300 |</div><div class="line">|  2 | hanmeimei |     850 |</div><div class="line">|  3 | tom       |    1850 |</div><div class="line">+----+-----------+---------+</div><div class="line">3 rows in set (0.00 sec)</div></pre></td></tr></table></figure>
+<h5 id="在客户端B开启事务，新增一条数据，其中balance字段值为600，并提交"><a href="#在客户端B开启事务，新增一条数据，其中balance字段值为600，并提交" class="headerlink" title="在客户端B开启事务，新增一条数据，其中balance字段值为600，并提交"></a>在客户端B开启事务，新增一条数据，其中balance字段值为600，并提交</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">mysql&gt; START TRANSACTION;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; insert into account values(null,&apos;lily&apos;,600);</div><div class="line">Query OK, 1 row affected (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; commit;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div></pre></td></tr></table></figure>
+<h5 id="在客户端A计算balance之和，值为300-850-1850-3000，没有把客户端B的值算进去，客户端A提交后再计算balance之和，居然变成了3600，这是因为把客户端B的600算进去了，站在客户的角度，客户是看不到客户端B的，它会觉得是天下掉馅饼了，多了600块，这就是幻读，站在开发者的角度，数据的一致性并没有破坏。但是在应用程序中，我们得代码可能会把18700提交给用户了，如果你一定要避免这情况小概率状况的发生，那么就要采取下面要介绍的事务隔离级别“串行化”"><a href="#在客户端A计算balance之和，值为300-850-1850-3000，没有把客户端B的值算进去，客户端A提交后再计算balance之和，居然变成了3600，这是因为把客户端B的600算进去了，站在客户的角度，客户是看不到客户端B的，它会觉得是天下掉馅饼了，多了600块，这就是幻读，站在开发者的角度，数据的一致性并没有破坏。但是在应用程序中，我们得代码可能会把18700提交给用户了，如果你一定要避免这情况小概率状况的发生，那么就要采取下面要介绍的事务隔离级别“串行化”" class="headerlink" title="在客户端A计算balance之和，值为300+850+1850=3000，没有把客户端B的值算进去，客户端A提交后再计算balance之和，居然变成了3600，这是因为把客户端B的600算进去了，站在客户的角度，客户是看不到客户端B的，它会觉得是天下掉馅饼了，多了600块，这就是幻读，站在开发者的角度，数据的一致性并没有破坏。但是在应用程序中，我们得代码可能会把18700提交给用户了，如果你一定要避免这情况小概率状况的发生，那么就要采取下面要介绍的事务隔离级别“串行化”"></a>在<font color="red">客户端A</font>计算balance之和，值为300+850+1850=3000，没有把客户端B的值算进去，客户端A提交后再计算balance之和，居然变成了3600，这是因为把客户端B的600算进去了，站在客户的角度，客户是看不到客户端B的，它会觉得是天下掉馅饼了，多了600块，这就是幻读，站在开发者的角度，数据的一致性并没有破坏。但是在应用程序中，我们得代码可能会把18700提交给用户了，如果你一定要避免这情况小概率状况的发生，那么就要采取下面要介绍的事务隔离级别“串行化”</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div></pre></td><td class="code"><pre><div class="line">mysql&gt; select * from account;</div><div class="line">+----+-----------+---------+</div><div class="line">| id | name      | balance |</div><div class="line">+----+-----------+---------+</div><div class="line">|  1 | lilei     |     300 |</div><div class="line">|  2 | hanmeimei |     850 |</div><div class="line">|  3 | tom       |    1850 |</div><div class="line">+----+-----------+---------+</div><div class="line">3 rows in set (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; select sum(balance) from account;</div><div class="line">+--------------+</div><div class="line">| sum(balance) |</div><div class="line">+--------------+</div><div class="line">|         3000 |</div><div class="line">+--------------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; commit;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; select sum(balance) from account;</div><div class="line">+--------------+</div><div class="line">| sum(balance) |</div><div class="line">+--------------+</div><div class="line">|         3600 |</div><div class="line">+--------------+</div><div class="line">1 row in set (0.00 sec)</div></pre></td></tr></table></figure>
+<h4 id="串行化-serializable"><a href="#串行化-serializable" class="headerlink" title="串行化(serializable)"></a>串行化(serializable)</h4><h5 id="打开一个客户端A，并设置当前事务模式为serializable，查询表account的初始值："><a href="#打开一个客户端A，并设置当前事务模式为serializable，查询表account的初始值：" class="headerlink" title="打开一个客户端A，并设置当前事务模式为serializable，查询表account的初始值："></a>打开一个<font color="red">客户端A</font>，并设置当前事务模式为serializable，查询表account的初始值：</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line">mysql&gt; SET session TRANSACTION ISOLATION LEVEL SERIALIZABLE;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; START TRANSACTION;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; select * from account;</div><div class="line">+----+-----------+---------+</div><div class="line">| id | name      | balance |</div><div class="line">+----+-----------+---------+</div><div class="line">|  1 | lilei     |     300 |</div><div class="line">|  2 | hanmeimei |     850 |</div><div class="line">|  3 | tom       |    1850 |</div><div class="line">|  4 | lily      |     600 |</div><div class="line">+----+-----------+---------+</div><div class="line">4 rows in set (0.00 sec)</div></pre></td></tr></table></figure>
+<h5 id="打开一个客户端B，并设置当前事务模式为serializable，插入一条记录报错，表被锁了插入失败，mysql中事务隔离级别为serializable时会锁表，因此不会出现幻读的情况，这种隔离级别并发性极低，往往一个事务霸占了一张表，其他成千上万个事务只有干瞪眼，得等他用完提交才可以使用，开发中很少会用到。"><a href="#打开一个客户端B，并设置当前事务模式为serializable，插入一条记录报错，表被锁了插入失败，mysql中事务隔离级别为serializable时会锁表，因此不会出现幻读的情况，这种隔离级别并发性极低，往往一个事务霸占了一张表，其他成千上万个事务只有干瞪眼，得等他用完提交才可以使用，开发中很少会用到。" class="headerlink" title="打开一个客户端B，并设置当前事务模式为serializable，插入一条记录报错，表被锁了插入失败，mysql中事务隔离级别为serializable时会锁表，因此不会出现幻读的情况，这种隔离级别并发性极低，往往一个事务霸占了一张表，其他成千上万个事务只有干瞪眼，得等他用完提交才可以使用，开发中很少会用到。"></a>打开一个<font color="red">客户端B</font>，并设置当前事务模式为serializable，插入一条记录报错，表被锁了插入失败，mysql中事务隔离级别为serializable时会锁表，因此不会出现幻读的情况，这种隔离级别并发性极低，往往一个事务霸占了一张表，其他成千上万个事务只有干瞪眼，得等他用完提交才可以使用，开发中很少会用到。</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">mysql&gt; SET session TRANSACTION ISOLATION LEVEL SERIALIZABLE;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; START TRANSACTION;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; insert into account values(null,&apos;lisa&apos;,0);</div><div class="line">ERROR 1205 (HY000): Lock wait timeout exceeded; try restarting transaction</div></pre></td></tr></table></figure>
+<h3 id="五、参考"><a href="#五、参考" class="headerlink" title="五、参考"></a><em>五、参考</em></h3><p><a href="https://www.cnblogs.com/huanongying/p/7021555.html" target="_blank" rel="external">MySQL的四种事务隔离级别</a></p>
+
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Mysql/" rel="tag">#Mysql</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/12/23/mysql-stock-over/" rel="next" title="Mysql防止库存超卖">
+                <i class="fa fa-chevron-left"></i> Mysql防止库存超卖
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="cloud-tie-wrapper" class="cloud-tie-wrapper"></div>
+      <script>
+        var cloudTieConfig = {
+          url: document.location.href,
+          sourceId: "",
+          productKey: "715b044bb3c749ae9adbd8c1d4f162b8",
+          target: "cloud-tie-wrapper"
+        };
+      </script>
+      <script src="https://img1.cache.netease.com/f2e/tie/yun/sdk/loader.js"></script>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="https://avatars1.githubusercontent.com/u/7411585?v=3&s=466"
+               alt="xxq" />
+          <p class="site-author-name" itemprop="name">xxq</p>
+          <p class="site-description motion-element" itemprop="description">记录平时学习</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">19</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">10</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/1506430045" target="_blank" title="github">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  github
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="http://weibo.com/u/3224218964" target="_blank" title="weibo">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  weibo
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#一、事务的基本要素（ACID）"><span class="nav-number">1.</span> <span class="nav-text">一、事务的基本要素（ACID）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#二、事务的并发问题"><span class="nav-number">2.</span> <span class="nav-text">二、事务的并发问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#三、MySQL事务隔离级别"><span class="nav-number">3.</span> <span class="nav-text">三、MySQL事务隔离级别</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#四、用例子说明各个隔离级别的情况"><span class="nav-number">4.</span> <span class="nav-text">四、用例子说明各个隔离级别的情况</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#未提交读-read-uncommitted"><span class="nav-number">4.1.</span> <span class="nav-text">未提交读(read-uncommitted)</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#打开一个客户端A，并设置当前事务模式为read-uncommitted（未提交读），查询表account的初始值："><span class="nav-number">4.1.1.</span> <span class="nav-text">打开一个客户端A，并设置当前事务模式为read uncommitted（未提交读），查询表account的初始值：</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#在客户端A的事务提交之前，打开另一个客户端B，更新表account："><span class="nav-number">4.1.2.</span> <span class="nav-text">在客户端A的事务提交之前，打开另一个客户端B，更新表account：</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#这时，虽然客户端B的事务还没提交，但是客户端A就可以查询到B已经更新的数据："><span class="nav-number">4.1.3.</span> <span class="nav-text">这时，虽然客户端B的事务还没提交，但是客户端A就可以查询到B已经更新的数据：</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#一旦客户端B的事务因为某种原因回滚，所有的操作都将会被撤销，那客户端A查询到的数据其实就是脏数据："><span class="nav-number">4.1.4.</span> <span class="nav-text">一旦客户端B的事务因为某种原因回滚，所有的操作都将会被撤销，那客户端A查询到的数据其实就是脏数据：</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#在客户端A执行更新语句update-account-set-balance-balance-50-where-id-1，lilei的balance没有变成350，居然是400，是不是很奇怪，数据的一致性没问啊，如果你这么想就太天真-了，在应用程序中，我们会用400-50-350，并不知道其他会话回滚了，要想解决这个问题可以采用读已提交的隔离级别"><span class="nav-number">4.1.5.</span> <span class="nav-text">在客户端A执行更新语句update account set balance = balance - 50 where id =1，lilei的balance没有变成350，居然是400，是不是很奇怪，数据的一致性没问啊，如果你这么想就太天真 了，在应用程序中，我们会用400-50=350，并不知道其他会话回滚了，要想解决这个问题可以采用读已提交的隔离级别</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#已提交读-read-committed"><span class="nav-number">4.2.</span> <span class="nav-text">已提交读(read-committed)</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#打开一个客户端A，并设置当前事务模式为read-committed（未提交读），查询表account的初始值："><span class="nav-number">4.2.1.</span> <span class="nav-text">打开一个客户端A，并设置当前事务模式为read committed（未提交读），查询表account的初始值：</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#在客户端A的事务提交之前，打开另一个客户端B，更新表account：-1"><span class="nav-number">4.2.2.</span> <span class="nav-text">在客户端A的事务提交之前，打开另一个客户端B，更新表account：</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#这时，客户端B的事务还没提交，客户端A不能查询到B已经更新的数据，解决了脏读问题："><span class="nav-number">4.2.3.</span> <span class="nav-text">这时，客户端B的事务还没提交，客户端A不能查询到B已经更新的数据，解决了脏读问题：</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#客户端B的事务提交"><span class="nav-number">4.2.4.</span> <span class="nav-text">客户端B的事务提交</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#客户端A执行与上一步相同的查询，结果-与上一步不一致，即产生了不可重复读的问题，在应用程序中，假设我们处于客户端A的会话，查询到lilei的balance为450，但是其他事务将lilei的balance值改为400，我们并不知道，如果用450这个值去做其他操作，是有问题的，不过这个概率真的很小哦，要想避免这个问题，可以采用可重复读的隔离级别"><span class="nav-number">4.2.5.</span> <span class="nav-text">客户端A执行与上一步相同的查询，结果 与上一步不一致，即产生了不可重复读的问题，在应用程序中，假设我们处于客户端A的会话，查询到lilei的balance为450，但是其他事务将lilei的balance值改为400，我们并不知道，如果用450这个值去做其他操作，是有问题的，不过这个概率真的很小哦，要想避免这个问题，可以采用可重复读的隔离级别</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#可重复读-repeatable-read"><span class="nav-number">4.3.</span> <span class="nav-text">可重复读(repeatable-read)</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#打开一个客户端A，并设置当前事务模式为repeatable-read，查询表account的初始值："><span class="nav-number">4.3.1.</span> <span class="nav-text">打开一个客户端A，并设置当前事务模式为repeatable read，查询表account的初始值：</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#在客户端A的事务提交之前，打开另一个客户端B，更新表account并提交，客户端B的事务居然可以修改客户端A事务查询到的行，也就是mysql的可重复读不会锁住事务查询到的行，这一点出乎我的意料，sql标准中事务隔离级别为可重复读时，读写操作要锁行的，mysql居然没有锁，我了个去。在应用程序中要注意给行加锁，不然你会以步骤（1）中lilei的balance为400作为中间值去做其他操作"><span class="nav-number">4.3.2.</span> <span class="nav-text">在客户端A的事务提交之前，打开另一个客户端B，更新表account并提交，客户端B的事务居然可以修改客户端A事务查询到的行，也就是mysql的可重复读不会锁住事务查询到的行，这一点出乎我的意料，sql标准中事务隔离级别为可重复读时，读写操作要锁行的，mysql居然没有锁，我了个去。在应用程序中要注意给行加锁，不然你会以步骤（1）中lilei的balance为400作为中间值去做其他操作</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#在客户端A执行步骤（1）的查询："><span class="nav-number">4.3.3.</span> <span class="nav-text">在客户端A执行步骤（1）的查询：</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#客户端A，lilei的balance仍然是400与步骤（1）查询结果一致，没有出现不可重复读的问题；接着执行update-balance-balance-50-where-id-1，balance没有变成400-50-350，lilei的balance值用的是步骤（2）中的350来算的，所以是300，数据的一致性倒是没有被破坏，这个有点神奇，也许是mysql的特色吧"><span class="nav-number">4.3.4.</span> <span class="nav-text">客户端A，lilei的balance仍然是400与步骤（1）查询结果一致，没有出现不可重复读的问题；接着执行update balance = balance - 50 where id = 1，balance没有变成400-50=350，lilei的balance值用的是步骤（2）中的350来算的，所以是300，数据的一致性倒是没有被破坏，这个有点神奇，也许是mysql的特色吧</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#在客户端B开启事务，新增一条数据，其中balance字段值为600，并提交"><span class="nav-number">4.3.5.</span> <span class="nav-text">在客户端B开启事务，新增一条数据，其中balance字段值为600，并提交</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#在客户端A计算balance之和，值为300-850-1850-3000，没有把客户端B的值算进去，客户端A提交后再计算balance之和，居然变成了3600，这是因为把客户端B的600算进去了，站在客户的角度，客户是看不到客户端B的，它会觉得是天下掉馅饼了，多了600块，这就是幻读，站在开发者的角度，数据的一致性并没有破坏。但是在应用程序中，我们得代码可能会把18700提交给用户了，如果你一定要避免这情况小概率状况的发生，那么就要采取下面要介绍的事务隔离级别“串行化”"><span class="nav-number">4.3.6.</span> <span class="nav-text">在客户端A计算balance之和，值为300+850+1850=3000，没有把客户端B的值算进去，客户端A提交后再计算balance之和，居然变成了3600，这是因为把客户端B的600算进去了，站在客户的角度，客户是看不到客户端B的，它会觉得是天下掉馅饼了，多了600块，这就是幻读，站在开发者的角度，数据的一致性并没有破坏。但是在应用程序中，我们得代码可能会把18700提交给用户了，如果你一定要避免这情况小概率状况的发生，那么就要采取下面要介绍的事务隔离级别“串行化”</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#串行化-serializable"><span class="nav-number">4.4.</span> <span class="nav-text">串行化(serializable)</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#打开一个客户端A，并设置当前事务模式为serializable，查询表account的初始值："><span class="nav-number">4.4.1.</span> <span class="nav-text">打开一个客户端A，并设置当前事务模式为serializable，查询表account的初始值：</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#打开一个客户端B，并设置当前事务模式为serializable，插入一条记录报错，表被锁了插入失败，mysql中事务隔离级别为serializable时会锁表，因此不会出现幻读的情况，这种隔离级别并发性极低，往往一个事务霸占了一张表，其他成千上万个事务只有干瞪眼，得等他用完提交才可以使用，开发中很少会用到。"><span class="nav-number">4.4.2.</span> <span class="nav-text">打开一个客户端B，并设置当前事务模式为serializable，插入一条记录报错，表被锁了插入失败，mysql中事务隔离级别为serializable时会锁表，因此不会出现幻读的情况，这种隔离级别并发性极低，往往一个事务霸占了一张表，其他成千上万个事务只有干瞪眼，得等他用完提交才可以使用，开发中很少会用到。</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#五、参考"><span class="nav-number">5.</span> <span class="nav-text">五、参考</span></a></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">xxq</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.0.1"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.0.1"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.0.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.0.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.0.1"></script>
+
+
+
+  
+
+  
+
+
+
+  
+  
+  
+
+  
+
+  
+
+</body>
+</html>
